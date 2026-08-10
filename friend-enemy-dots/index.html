@@ -81,9 +81,10 @@ function step() {
     y -= (e.y - y) * ENEMY_PUSH;
     next.push({ x, y });
   }
+  const M = 6; // keep dots on the floor — enemy push can otherwise fling them off-canvas
   for (let i = 0; i < N; i++) {
-    dots[i].x = next[i].x;
-    dots[i].y = next[i].y;
+    dots[i].x = Math.min(W - M, Math.max(M, next[i].x));
+    dots[i].y = Math.min(H - M, Math.max(M, next[i].y));
     if (Math.random() < RECHOOSE_P) {
       dots[i].friend = pickOther(i, N);
       dots[i].enemy = pickOther(i, N);
