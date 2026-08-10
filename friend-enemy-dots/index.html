@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Friend / Enemy Dots</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0b10; color: #ddd;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  #wrap { display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 16px; box-sizing: border-box; height: 100%; }
+  canvas { background: #12121a; border-radius: 8px; max-width: 100%;
+    max-height: calc(100% - 90px); }
+  #controls { display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+    font-size: 13px; }
+  label { display: flex; gap: 6px; align-items: center; }
+  input[type=range] { width: 110px; }
+  button { background: #222233; color: #ddd; border: 1px solid #444;
+    border-radius: 6px; padding: 4px 12px; font: inherit; cursor: pointer; }
+  #credit { font-size: 11px; color: #777; }
+  a { color: #8ab4f8; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="700" height="700"></canvas>
+  <div id="controls">
+    <label>dots <input id="n" type="range" min="20" max="600" value="200"><span id="nv">200</span></label>
+    <label>friend pull <input id="fp" type="range" min="1" max="30" value="10"><span id="fpv">0.10</span></label>
+    <label>enemy push <input id="ep" type="range" min="1" max="30" value="3"><span id="epv">0.03</span></label>
+    <button id="reset">reset</button>
+  </div>
+  <div id="credit">rules: each dot picks one friend + one enemy · each step: 0.5% toward centre,
+    a large step toward friend, a small step away from enemy · dots occasionally re-choose ·
+    after <a href="https://x.com/IsaacKing314/status/2086721066106253347">@IsaacKing314</a></div>
+</div>
+<script>
+'use strict';
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height, CX = W / 2, CY = H / 2;
+
+let N = 200;
+let FRIEND_PULL = 0.10;   // fraction of distance to friend covered per step
+let ENEMY_PUSH = 0.03;    // fraction of distance to enemy stepped away per step
+const CENTER_PULL = 0.005; // 0.5% toward centre per step
+const RECHOOSE_P = 0.002;  // per-dot per-step chance of re-choosing
+
+let dots = [];
+
+function pickOther(i, count) {
+  let j;
+  do { j = Math.floor(Math.random() * count); } while (j === i);
+  return j;
+}
+
+function init() {
+  dots = [];
+  for (let i = 0; i < N; i++) {
+    dots.push({
+      x: Math.random() * W, y: Math.random() * H,
+      hue: Math.floor(Math.random() * 360),
+      friend: 0, enemy: 0,
+    });
+  }
+  for (let i = 0; i < N; i++) {
+    dots[i].friend = pickOther(i, N);
+    dots[i].enemy = pickOther(i, N);
+  }
+}
+
+function step() {
+  const next = [];
+  for (let i = 0; i < N; i++) {
+    const d = dots[i], f = dots[d.friend], e = dots[d.enemy];
+    let x = d.x, y = d.y;
+    x += (CX - x) * CENTER_PULL;
+    y += (CY - y) * CENTER_PULL;
+    x += (f.x - x) * FRIEND_PULL;
+    y += (f.y - y) * FRIEND_PULL;
+    x -= (e.x - x) * ENEMY_PUSH;
+    y -= (e.y - y) * ENEMY_PUSH;
+    next.push({ x, y });
+  }
+  for (let i = 0; i < N; i++) {
+    dots[i].x = next[i].x;
+    dots[i].y = next[i].y;
+    if (Math.random() < RECHOOSE_P) {
+      dots[i].friend = pickOther(i, N);
+      dots[i].enemy = pickOther(i, N);
+    }
+  }
+}
+
+function draw() {
+  // translucent clear leaves short motion trails
+  ctx.fillStyle = 'rgba(18, 18, 26, 0.35)';
+  ctx.fillRect(0, 0, W, H);
+  for (const d of dots) {
+    ctx.fillStyle = `hsl(${d.hue} 80% 65%)`;
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function frame() {
+  step();
+  draw();
+  requestAnimationFrame(frame);
+}
+
+const $ = id => document.getElementById(id);
+$('n').oninput = e => { N = +e.target.value; $('nv').textContent = N; init(); };
+$('fp').oninput = e => { FRIEND_PULL = e.target.value / 100; $('fpv').textContent = FRIEND_PULL.toFixed(2); };
+$('ep').oninput = e => { ENEMY_PUSH = e.target.value / 100; $('epv').textContent = ENEMY_PUSH.toFixed(2); };
+$('reset').onclick = init;
+
+init();
+frame();
+</script>
+</body>
+</html>
