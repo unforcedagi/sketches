@@ -27,7 +27,7 @@
   <canvas id="c" width="700" height="700"></canvas>
   <div id="controls">
     <label>dots <input id="n" type="range" min="60" max="600" value="240"><span id="nv">240</span></label>
-    <label>speed <input id="sp" type="range" min="5" max="40" value="20"><span id="spv">2.0</span></label>
+    <label>dot speed <input id="sp" type="range" min="5" max="40" value="20"><span id="spv">2.0</span></label>
     <label>radius <input id="cr" type="range" min="4" max="20" value="8"><span id="crv">8</span></label>
     <button id="reset">reset</button>
   </div>
@@ -39,6 +39,8 @@
     touch converts prey to the predator's tribe ·
     <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
 </div>
+<script src="../lib/gifenc.js"></script>
+<script src="../lib/controls.js"></script>
 <script>
 'use strict';
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
@@ -120,7 +122,7 @@ function step() {
   rings = rings.filter(r => r.alpha > 0);
 }
 
-function draw() {
+function draw(alpha) {
   // translucent clear leaves short motion trails
   ctx.fillStyle = 'rgba(18, 18, 26, 0.35)';
   ctx.fillRect(0, 0, W, H);
@@ -155,12 +157,6 @@ function draw() {
   ctx.fillText(NAMES.map((n, t) => n + ' ' + counts[t]).join(' · '), bx, by + bh + 13);
 }
 
-function frame() {
-  step();
-  draw();
-  requestAnimationFrame(frame);
-}
-
 const $ = id => document.getElementById(id);
 $('n').oninput = e => { N = +e.target.value; $('nv').textContent = N; init(); };
 $('sp').oninput = e => { SPEED = e.target.value / 10; $('spv').textContent = SPEED.toFixed(1); };
@@ -168,7 +164,7 @@ $('cr').oninput = e => { RADIUS = +e.target.value; $('crv').textContent = RADIUS
 $('reset').onclick = init;
 
 init();
-frame();
+SketchControls.attach({ canvas: cv, step, draw, ticksPerSecond: 60 });
 </script>
 </body>
 </html>

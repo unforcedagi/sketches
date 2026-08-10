@@ -35,6 +35,8 @@
     coupling·(1&nbsp;−&nbsp;phase) · watch random twinkling converge to unified pulsing ·
     <a href="https://unforcedagi.github.io/sketches/">← more sketches</a></div>
 </div>
+<script src="../lib/gifenc.js"></script>
+<script src="../lib/controls.js"></script>
 <script>
 'use strict';
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
@@ -45,8 +47,9 @@ let COUPLING = 0.15;     // phase advance factor applied to neighbours of a flas
 let RADIUS = 120;        // px within which a flash is "seen"
 const BASE_PERIOD = 2.0; // seconds per cycle, before per-firefly spread
 const SPREAD = 0.15;     // ± fraction of natural-frequency spread
-const DRIFT = 3;         // px/s std-ish scale of the slow positional random walk
-const FLASH_TIME = 0.30; // seconds a flash glow lasts
+const DRIFT = 3;         // px/s-of-sim-time scale of the slow positional random walk
+const DT = 1 / 60;       // fixed simulation timestep, seconds of sim time per tick
+const FLASH_TICKS = 18;  // ticks a flash glow lasts (18/60 ≈ 0.3 s of sim time)
 const M = 8;             // canvas margin — nothing leaves the canvas
 
 let flies = [];
@@ -56,8 +59,8 @@ function makeFly() {
     x: M + Math.random() * (W - 2 * M),
     y: M + Math.random() * (H - 2 * M),
     phase: Math.random(),                                   // in [0,1)
-    freq: 1 / (BASE_PERIOD * (1 + (Math.random() * 2 - 1) * SPREAD)), // cycles/s
-    flash: 0,                                               // seconds of glow left
+    freq: 1 / (BASE_PERIOD * (1 + (Math.random() * 2 - 1) * SPREAD)), // cycles per second of sim time
+    flash: 0,                                               // ticks of glow left
   };
 }
 
@@ -66,18 +69,18 @@ function init() {
   for (let i = 0; i < N; i++) flies.push(makeFly());
 }
 
-function step(dt) {
+function step() {
   const r2 = RADIUS * RADIUS;
   const fired = [];
   for (const f of flies) {
     // tiny random walk, clamped to canvas bounds
-    f.x = Math.min(W - M, Math.max(M, f.x + (Math.random() - 0.5) * DRIFT * dt * 2));
-    f.y = Math.min(H - M, Math.max(M, f.y + (Math.random() - 0.5) * DRIFT * dt * 2));
-    f.phase += f.freq * dt;
-    if (f.flash > 0) f.flash -= dt;
+    f.x = Math.min(W - M, Math.max(M, f.x + (Math.random() - 0.5) * DRIFT * DT * 2));
+    f.y = Math.min(H - M, Math.max(M, f.y + (Math.random() - 0.5) * DRIFT * DT * 2));
+    f.phase += f.freq * DT;
+    if (f.flash > 0) f.flash -= 1;
     if (f.phase >= 1) {
       f.phase = 0;
-      f.flash = FLASH_TIME;
+      f.flash = FLASH_TICKS;
       fired.push(f);
     }
   }
@@ -104,12 +107,12 @@ function orderParameter() {
   return Math.sqrt(sx * sx + sy * sy) / flies.length;
 }
 
-function draw() {
+function draw(alpha) {
   ctx.fillStyle = '#12121a';
   ctx.fillRect(0, 0, W, H);
   for (const f of flies) {
     if (f.flash > 0) {
-      const t = f.flash / FLASH_TIME; // 1 → 0 as the glow fades
+      const t = f.flash / FLASH_TICKS; // 1 → 0 as the glow fades
       const glowR = 6 + 14 * t;
       const grad = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, glowR);
       grad.addColorStop(0, `rgba(255, 255, 220, ${0.95 * t + 0.05})`);
@@ -135,15 +138,6 @@ function draw() {
   ctx.fillText('sync r = ' + orderParameter().toFixed(3), 10, 20);
 }
 
-let last = performance.now();
-function frame(now) {
-  const dt = Math.min(0.05, (now - last) / 1000); // clamp big gaps (tab switches)
-  last = now;
-  step(dt);
-  draw();
-  requestAnimationFrame(frame);
-}
-
 const $ = id => document.getElementById(id);
 $('n').oninput = e => { N = +e.target.value; $('nv').textContent = N; init(); };
 $('k').oninput = e => { COUPLING = e.target.value / 100; $('kv').textContent = COUPLING.toFixed(2); };
@@ -151,7 +145,7 @@ $('r').oninput = e => { RADIUS = +e.target.value; $('rv').textContent = RADIUS; 
 $('reset').onclick = init;
 
 init();
-requestAnimationFrame(frame);
+SketchControls.attach({ canvas: cv, step, draw, ticksPerSecond: 60 });
 </script>
 </body>
 </html>

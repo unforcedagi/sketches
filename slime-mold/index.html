@@ -34,6 +34,8 @@
     turns toward the strongest, moves, deposits · the field diffuses and decays each frame ·
     <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
 </div>
+<script src="../lib/gifenc.js"></script>
+<script src="../lib/controls.js"></script>
 <script>
 'use strict';
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
@@ -110,7 +112,7 @@ function sample(x, y) {
   return trail[iy * FW + ix];
 }
 
-function step() {
+function moveAgents() {
   for (let i = 0; i < N; i++) {
     let x = ax[i], y = ay[i], h = ah[i];
     // sense
@@ -169,7 +171,15 @@ function diffuse() {
   }
 }
 
-function render() {
+// one full simulation tick: agents sense/rotate/move/deposit, then the field
+// diffuses and decays — rendering lives in draw() so multiple ticks per
+// display frame don't pay for multiple renders
+function step() {
+  moveAgents();
+  diffuse();
+}
+
+function draw(alpha) { // alpha ignored: the field itself is the smoothing
   for (let i = 0, p = 0; i < CELLS; i++, p += 4) {
     let v = trail[i] * EXPOSURE;
     if (v > 255) v = 255;
@@ -184,13 +194,6 @@ function render() {
   ctx.drawImage(off, 0, 0, W, H);
 }
 
-function frame() {
-  step();
-  diffuse();
-  render();
-  requestAnimationFrame(frame);
-}
-
 const $ = id => document.getElementById(id);
 $('n').oninput = e => { N = +e.target.value; $('nv').textContent = N; initAgents(); };
 $('sa').oninput = e => {
@@ -201,7 +204,7 @@ $('dc').oninput = e => { DECAY = e.target.value / 1000; $('dcv').textContent = D
 $('reset').onclick = reset;
 
 reset();
-frame();
+SketchControls.attach({ canvas: cv, step, draw, ticksPerSecond: 60 });
 </script>
 </body>
 </html>

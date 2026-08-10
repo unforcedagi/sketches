@@ -36,6 +36,8 @@
     pulls its opinion-hue toward the trusted, away from the distrusted, and gently toward nearby dots ·
     dots occasionally re-choose · <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
 </div>
+<script src="../lib/gifenc.js"></script>
+<script src="../lib/controls.js"></script>
 <script>
 'use strict';
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
@@ -132,7 +134,7 @@ function step() {
   }
 }
 
-function draw() {
+function draw(alpha) { // alpha unused: trails + wander don't need interpolation
   // translucent clear leaves short motion trails
   ctx.fillStyle = 'rgba(18, 18, 26, 0.35)';
   ctx.fillRect(0, 0, W, H);
@@ -155,12 +157,6 @@ function draw() {
   }
 }
 
-function frame() {
-  step();
-  draw();
-  requestAnimationFrame(frame);
-}
-
 const $ = id => document.getElementById(id);
 $('n').oninput = e => { N = +e.target.value; $('nv').textContent = N; init(); };
 $('tr').oninput = e => { TRUST = e.target.value / 100; $('trv').textContent = TRUST.toFixed(2); };
@@ -170,7 +166,7 @@ $('links').onchange = e => { SHOW_LINKS = e.target.checked; };
 $('reset').onclick = init;
 
 init();
-frame();
+SketchControls.attach({ canvas: cv, step, draw, ticksPerSecond: 60 });
 </script>
 </body>
 </html>

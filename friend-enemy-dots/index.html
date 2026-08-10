@@ -25,25 +25,34 @@
 <div id="wrap">
   <canvas id="c" width="700" height="700"></canvas>
   <div id="controls">
-    <label>dots <input id="n" type="range" min="20" max="600" value="200"><span id="nv">200</span></label>
-    <label>friend pull <input id="fp" type="range" min="1" max="30" value="10"><span id="fpv">0.10</span></label>
-    <label>enemy push <input id="ep" type="range" min="1" max="30" value="3"><span id="epv">0.03</span></label>
+    <label>dots <input id="n" type="range" min="20" max="600" value="250"><span id="nv">250</span></label>
+    <label>friend step <input id="fp" type="range" min="0" max="50" value="22"><span id="fpv">2.2</span></label>
+    <label>enemy step <input id="ep" type="range" min="0" max="50" value="12"><span id="epv">1.2</span></label>
     <button id="reset">reset</button>
   </div>
-  <div id="credit">rules: each dot picks one friend + one enemy · each step: 0.5% toward centre,
-    a large step toward friend, a small step away from enemy · dots occasionally re-choose ·
-    after <a href="https://x.com/IsaacKing314/status/2086721066106253347">@IsaacKing314</a></div>
+  <div id="credit">rules: each dot picks one friend + one enemy · each tick: 0.5% toward centre,
+    a fixed large step toward friend, a fixed small step away from enemy · dots occasionally re-choose ·
+    after <a href="https://x.com/IsaacKing314/status/2086721066106253347">@IsaacKing314</a> ·
+    <a href="https://unforcedagi.github.io/sketches/">← more sketches</a></div>
 </div>
+<script src="../lib/gifenc.js"></script>
+<script src="../lib/controls.js"></script>
 <script>
 'use strict';
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
 const W = cv.width, H = cv.height, CX = W / 2, CY = H / 2;
 
-let N = 200;
-let FRIEND_PULL = 0.10;   // fraction of distance to friend covered per step
-let ENEMY_PUSH = 0.03;    // fraction of distance to enemy stepped away per step
-const CENTER_PULL = 0.005; // 0.5% toward centre per step
-const RECHOOSE_P = 0.002;  // per-dot per-step chance of re-choosing
+let N = 250;
+// Fixed-size steps, like the original: direction matters, distance doesn't.
+// (Proportional steps make the dynamics linear, and the swarm collapses onto
+// one axis — the diagonal-line failure. Fixed steps also read far smoother:
+// every dot moves at constant speed instead of teleporting when far away.)
+let FRIEND_STEP = 2.2;   // px per tick toward friend
+let ENEMY_STEP = 1.2;    // px per tick away from enemy
+const CENTER_PULL = 0.005; // 0.5% toward centre per tick
+const RECHOOSE_P = 0.004;  // per-dot per-tick chance of re-choosing
+const JITTER = 0.3;        // px of noise per tick, keeps things mixed
+const M = 6;               // canvas margin
 
 let dots = [];
 
@@ -56,8 +65,9 @@ function pickOther(i, count) {
 function init() {
   dots = [];
   for (let i = 0; i < N; i++) {
+    const x = Math.random() * W, y = Math.random() * H;
     dots.push({
-      x: Math.random() * W, y: Math.random() * H,
+      x, y, px: x, py: y,
       hue: Math.floor(Math.random() * 360),
       friend: 0, enemy: 0,
     });
@@ -73,51 +83,64 @@ function step() {
   for (let i = 0; i < N; i++) {
     const d = dots[i], f = dots[d.friend], e = dots[d.enemy];
     let x = d.x, y = d.y;
+
     x += (CX - x) * CENTER_PULL;
     y += (CY - y) * CENTER_PULL;
-    x += (f.x - x) * FRIEND_PULL;
-    y += (f.y - y) * FRIEND_PULL;
-    x -= (e.x - x) * ENEMY_PUSH;
-    y -= (e.y - y) * ENEMY_PUSH;
+
+    const fdx = f.x - x, fdy = f.y - y;
+    const fd = Math.hypot(fdx, fdy);
+    if (fd > 0.001) {
+      const s = Math.min(FRIEND_STEP, fd); // don't overshoot when close
+      x += fdx / fd * s;
+      y += fdy / fd * s;
+    }
+
+    const edx = e.x - x, edy = e.y - y;
+    const ed = Math.hypot(edx, edy);
+    if (ed > 0.001) {
+      x -= edx / ed * ENEMY_STEP;
+      y -= edy / ed * ENEMY_STEP;
+    }
+
+    x += (Math.random() - 0.5) * 2 * JITTER;
+    y += (Math.random() - 0.5) * 2 * JITTER;
+
     next.push({ x, y });
   }
-  const M = 6; // keep dots on the floor — enemy push can otherwise fling them off-canvas
   for (let i = 0; i < N; i++) {
-    dots[i].x = Math.min(W - M, Math.max(M, next[i].x));
-    dots[i].y = Math.min(H - M, Math.max(M, next[i].y));
+    const d = dots[i];
+    d.px = d.x; d.py = d.y;
+    d.x = Math.min(W - M, Math.max(M, next[i].x));
+    d.y = Math.min(H - M, Math.max(M, next[i].y));
     if (Math.random() < RECHOOSE_P) {
-      dots[i].friend = pickOther(i, N);
-      dots[i].enemy = pickOther(i, N);
+      d.friend = pickOther(i, N);
+      d.enemy = pickOther(i, N);
     }
   }
 }
 
-function draw() {
-  // translucent clear leaves short motion trails
-  ctx.fillStyle = 'rgba(18, 18, 26, 0.35)';
+function draw(alpha) {
+  ctx.fillStyle = '#12121a';
   ctx.fillRect(0, 0, W, H);
   for (const d of dots) {
-    ctx.fillStyle = `hsl(${d.hue} 80% 65%)`;
+    // interpolate between the last two ticks for 60fps-smooth motion
+    const x = d.px + (d.x - d.px) * alpha;
+    const y = d.py + (d.y - d.py) * alpha;
+    ctx.fillStyle = `hsl(${d.hue} 75% 68%)`;
     ctx.beginPath();
-    ctx.arc(d.x, d.y, 3, 0, Math.PI * 2);
+    ctx.arc(x, y, 2.2, 0, Math.PI * 2);
     ctx.fill();
   }
 }
 
-function frame() {
-  step();
-  draw();
-  requestAnimationFrame(frame);
-}
-
 const $ = id => document.getElementById(id);
 $('n').oninput = e => { N = +e.target.value; $('nv').textContent = N; init(); };
-$('fp').oninput = e => { FRIEND_PULL = e.target.value / 100; $('fpv').textContent = FRIEND_PULL.toFixed(2); };
-$('ep').oninput = e => { ENEMY_PUSH = e.target.value / 100; $('epv').textContent = ENEMY_PUSH.toFixed(2); };
+$('fp').oninput = e => { FRIEND_STEP = e.target.value / 10; $('fpv').textContent = FRIEND_STEP.toFixed(1); };
+$('ep').oninput = e => { ENEMY_STEP = e.target.value / 10; $('epv').textContent = ENEMY_STEP.toFixed(1); };
 $('reset').onclick = init;
 
 init();
-frame();
+SketchControls.attach({ canvas: cv, step, draw, ticksPerSecond: 30 });
 </script>
 </body>
 </html>
