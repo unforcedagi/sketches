@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Firefly Sync</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0b10; color: #ddd;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  #wrap { display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 16px; box-sizing: border-box; height: 100%; }
+  canvas { background: #12121a; border-radius: 8px; max-width: 100%;
+    max-height: calc(100% - 90px); }
+  #controls { display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+    font-size: 13px; }
+  label { display: flex; gap: 6px; align-items: center; }
+  input[type=range] { width: 110px; }
+  button { background: #222233; color: #ddd; border: 1px solid #444;
+    border-radius: 6px; padding: 4px 12px; font: inherit; cursor: pointer; }
+  #credit { font-size: 11px; color: #777; }
+  a { color: #8ab4f8; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="700" height="700"></canvas>
+  <div id="controls">
+    <label>fireflies <input id="n" type="range" min="20" max="400" value="150"><span id="nv">150</span></label>
+    <label>coupling <input id="k" type="range" min="0" max="50" value="15"><span id="kv">0.15</span></label>
+    <label>radius <input id="r" type="range" min="30" max="350" value="120"><span id="rv">120</span></label>
+    <button id="reset">reset</button>
+  </div>
+  <div id="credit">integrate-and-fire firefly synchronization: each firefly's phase climbs at its
+    own rate (period ~2s ± 15%); on flashing it nudges neighbours within the radius forward by
+    coupling·(1&nbsp;−&nbsp;phase) · watch random twinkling converge to unified pulsing ·
+    <a href="https://unforcedagi.github.io/sketches/">← more sketches</a></div>
+</div>
+<script>
+'use strict';
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+
+let N = 150;
+let COUPLING = 0.15;     // phase advance factor applied to neighbours of a flasher
+let RADIUS = 120;        // px within which a flash is "seen"
+const BASE_PERIOD = 2.0; // seconds per cycle, before per-firefly spread
+const SPREAD = 0.15;     // ± fraction of natural-frequency spread
+const DRIFT = 3;         // px/s std-ish scale of the slow positional random walk
+const FLASH_TIME = 0.30; // seconds a flash glow lasts
+const M = 8;             // canvas margin — nothing leaves the canvas
+
+let flies = [];
+
+function makeFly() {
+  return {
+    x: M + Math.random() * (W - 2 * M),
+    y: M + Math.random() * (H - 2 * M),
+    phase: Math.random(),                                   // in [0,1)
+    freq: 1 / (BASE_PERIOD * (1 + (Math.random() * 2 - 1) * SPREAD)), // cycles/s
+    flash: 0,                                               // seconds of glow left
+  };
+}
+
+function init() {
+  flies = [];
+  for (let i = 0; i < N; i++) flies.push(makeFly());
+}
+
+function step(dt) {
+  const r2 = RADIUS * RADIUS;
+  const fired = [];
+  for (const f of flies) {
+    // tiny random walk, clamped to canvas bounds
+    f.x = Math.min(W - M, Math.max(M, f.x + (Math.random() - 0.5) * DRIFT * dt * 2));
+    f.y = Math.min(H - M, Math.max(M, f.y + (Math.random() - 0.5) * DRIFT * dt * 2));
+    f.phase += f.freq * dt;
+    if (f.flash > 0) f.flash -= dt;
+    if (f.phase >= 1) {
+      f.phase = 0;
+      f.flash = FLASH_TIME;
+      fired.push(f);
+    }
+  }
+  // each flash nudges neighbours' phases forward by coupling*(1 - phase);
+  // a nudge past 1 is clamped just below, so the neighbour fires next frame
+  for (const f of fired) {
+    for (const g of flies) {
+      if (g === f || g.flash > 0) continue;
+      const dx = g.x - f.x, dy = g.y - f.y;
+      if (dx * dx + dy * dy <= r2) {
+        g.phase = Math.min(0.9999, g.phase + COUPLING * (1 - g.phase));
+      }
+    }
+  }
+}
+
+function orderParameter() {
+  let sx = 0, sy = 0;
+  for (const f of flies) {
+    const a = f.phase * 2 * Math.PI;
+    sx += Math.cos(a);
+    sy += Math.sin(a);
+  }
+  return Math.sqrt(sx * sx + sy * sy) / flies.length;
+}
+
+function draw() {
+  ctx.fillStyle = '#12121a';
+  ctx.fillRect(0, 0, W, H);
+  for (const f of flies) {
+    if (f.flash > 0) {
+      const t = f.flash / FLASH_TIME; // 1 → 0 as the glow fades
+      const glowR = 6 + 14 * t;
+      const grad = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, glowR);
+      grad.addColorStop(0, `rgba(255, 255, 220, ${0.95 * t + 0.05})`);
+      grad.addColorStop(0.35, `rgba(255, 230, 110, ${0.6 * t})`);
+      grad.addColorStop(1, 'rgba(255, 210, 60, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(f.x, f.y, glowR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = `rgba(255, 255, 235, ${0.5 + 0.5 * t})`;
+      ctx.beginPath();
+      ctx.arc(f.x, f.y, 2.5 + 1.5 * t, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = '#553';
+      ctx.beginPath();
+      ctx.arc(f.x, f.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.fillStyle = '#889';
+  ctx.font = '12px ui-monospace, SFMono-Regular, Menlo, monospace';
+  ctx.fillText('sync r = ' + orderParameter().toFixed(3), 10, 20);
+}
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); // clamp big gaps (tab switches)
+  last = now;
+  step(dt);
+  draw();
+  requestAnimationFrame(frame);
+}
+
+const $ = id => document.getElementById(id);
+$('n').oninput = e => { N = +e.target.value; $('nv').textContent = N; init(); };
+$('k').oninput = e => { COUPLING = e.target.value / 100; $('kv').textContent = COUPLING.toFixed(2); };
+$('r').oninput = e => { RADIUS = +e.target.value; $('rv').textContent = RADIUS; };
+$('reset').onclick = init;
+
+init();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

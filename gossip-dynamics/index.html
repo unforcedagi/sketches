@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gossip Dynamics</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0b10; color: #ddd;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  #wrap { display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 16px; box-sizing: border-box; height: 100%; }
+  canvas { background: #12121a; border-radius: 8px; max-width: 100%;
+    max-height: calc(100% - 90px); }
+  #controls { display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+    font-size: 13px; }
+  label { display: flex; gap: 6px; align-items: center; }
+  input[type=range] { width: 110px; }
+  button { background: #222233; color: #ddd; border: 1px solid #444;
+    border-radius: 6px; padding: 4px 12px; font: inherit; cursor: pointer; }
+  #credit { font-size: 11px; color: #777; }
+  a { color: #8ab4f8; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="700" height="700"></canvas>
+  <div id="controls">
+    <label>dots <input id="n" type="range" min="40" max="500" value="200"><span id="nv">200</span></label>
+    <label>trust <input id="tr" type="range" min="0" max="20" value="5"><span id="trv">0.05</span></label>
+    <label>distrust <input id="dt" type="range" min="0" max="20" value="2"><span id="dtv">0.02</span></label>
+    <label>radius <input id="rad" type="range" min="0" max="150" value="60"><span id="radv">60</span></label>
+    <label><input id="links" type="checkbox" checked> trust links</label>
+    <button id="reset">reset</button>
+  </div>
+  <div id="credit">rules: dots wander; each picks one trusted + one distrusted dot and each step
+    pulls its opinion-hue toward the trusted, away from the distrusted, and gently toward nearby dots ·
+    dots occasionally re-choose · <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
+</div>
+<script>
+'use strict';
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+
+let N = 200;
+let TRUST = 0.05;       // rate of hue pull toward trusted dot's hue
+let DISTRUST = 0.02;    // rate of hue push away from distrusted dot's hue
+let RADIUS = 60;        // px: neighbours inside this radius exert local conformity
+const CONFORMITY = 0.01;   // per-neighbour hue pull rate
+const SPEED = 0.8;         // px per frame
+const TURN = 0.15;         // heading random-walk magnitude
+const RECHOOSE_P = 0.002;  // per-dot per-frame chance of re-choosing both picks
+const M = 6;               // wall margin
+let SHOW_LINKS = true;
+
+let dots = [];
+
+function pickOther(i, count) {
+  let j;
+  do { j = Math.floor(Math.random() * count); } while (j === i);
+  return j;
+}
+
+// signed shortest angular difference from hue a to hue b, in (-180, 180]
+function hueDiff(a, b) {
+  let d = (b - a) % 360;
+  if (d > 180) d -= 360;
+  if (d < -180) d += 360;
+  return d;
+}
+
+function init() {
+  dots = [];
+  for (let i = 0; i < N; i++) {
+    dots.push({
+      x: M + Math.random() * (W - 2 * M),
+      y: M + Math.random() * (H - 2 * M),
+      heading: Math.random() * Math.PI * 2,
+      hue: Math.random() * 360,
+      trusted: 0, distrusted: 0,
+    });
+  }
+  for (let i = 0; i < N; i++) {
+    dots[i].trusted = pickOther(i, N);
+    dots[i].distrusted = pickOther(i, N);
+  }
+}
+
+function step() {
+  const R2 = RADIUS * RADIUS;
+  // compute all hue updates against the current state, then apply
+  const dHue = new Array(N).fill(0);
+  for (let i = 0; i < N; i++) {
+    const d = dots[i];
+    dHue[i] += hueDiff(d.hue, dots[d.trusted].hue) * TRUST;
+    dHue[i] -= hueDiff(d.hue, dots[d.distrusted].hue) * DISTRUST;
+  }
+  // local conformity: symmetric weak pull between nearby pairs
+  for (let i = 0; i < N; i++) {
+    const a = dots[i];
+    for (let j = i + 1; j < N; j++) {
+      const b = dots[j];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      if (dx * dx + dy * dy < R2) {
+        const diff = hueDiff(a.hue, b.hue);
+        dHue[i] += diff * CONFORMITY;
+        dHue[j] -= diff * CONFORMITY;
+      }
+    }
+  }
+  for (let i = 0; i < N; i++) {
+    const d = dots[i];
+    d.hue = ((d.hue + dHue[i]) % 360 + 360) % 360;
+
+    // wander: heading random-walks, constant slow speed
+    d.heading += (Math.random() - 0.5) * 2 * TURN;
+    d.x += Math.cos(d.heading) * SPEED;
+    d.y += Math.sin(d.heading) * SPEED;
+    // bounce headings off walls, clamp so nothing ever leaves the canvas
+    if (d.x < M || d.x > W - M) {
+      d.heading = Math.PI - d.heading;
+      d.x = Math.min(W - M, Math.max(M, d.x));
+    }
+    if (d.y < M || d.y > H - M) {
+      d.heading = -d.heading;
+      d.y = Math.min(H - M, Math.max(M, d.y));
+    }
+
+    if (Math.random() < RECHOOSE_P) {
+      d.trusted = pickOther(i, N);
+      d.distrusted = pickOther(i, N);
+    }
+  }
+}
+
+function draw() {
+  // translucent clear leaves short motion trails
+  ctx.fillStyle = 'rgba(18, 18, 26, 0.35)';
+  ctx.fillRect(0, 0, W, H);
+  if (SHOW_LINKS) {
+    ctx.strokeStyle = 'rgba(221, 221, 221, 0.05)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (const d of dots) {
+      const t = dots[d.trusted];
+      ctx.moveTo(d.x, d.y);
+      ctx.lineTo(t.x, t.y);
+    }
+    ctx.stroke();
+  }
+  for (const d of dots) {
+    ctx.fillStyle = `hsl(${d.hue} 80% 65%)`;
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function frame() {
+  step();
+  draw();
+  requestAnimationFrame(frame);
+}
+
+const $ = id => document.getElementById(id);
+$('n').oninput = e => { N = +e.target.value; $('nv').textContent = N; init(); };
+$('tr').oninput = e => { TRUST = e.target.value / 100; $('trv').textContent = TRUST.toFixed(2); };
+$('dt').oninput = e => { DISTRUST = e.target.value / 100; $('dtv').textContent = DISTRUST.toFixed(2); };
+$('rad').oninput = e => { RADIUS = +e.target.value; $('radv').textContent = RADIUS; };
+$('links').onchange = e => { SHOW_LINKS = e.target.checked; };
+$('reset').onclick = init;
+
+init();
+frame();
+</script>
+</body>
+</html>

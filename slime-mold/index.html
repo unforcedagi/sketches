@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slime Mold</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0b10; color: #ddd;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  #wrap { display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 16px; box-sizing: border-box; height: 100%; }
+  canvas { background: #12121a; border-radius: 8px; max-width: 100%;
+    max-height: calc(100% - 90px); }
+  #controls { display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+    font-size: 13px; }
+  label { display: flex; gap: 6px; align-items: center; }
+  input[type=range] { width: 110px; }
+  button { background: #222233; color: #ddd; border: 1px solid #444;
+    border-radius: 6px; padding: 4px 12px; font: inherit; cursor: pointer; }
+  #credit { font-size: 11px; color: #777; }
+  a { color: #8ab4f8; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="700" height="700"></canvas>
+  <div id="controls">
+    <label>agents <input id="n" type="range" min="1000" max="20000" step="500" value="8000"><span id="nv">8000</span></label>
+    <label>sensor angle <input id="sa" type="range" min="10" max="60" value="25"><span id="sav">25&deg;</span></label>
+    <label>decay <input id="dc" type="range" min="900" max="995" value="960"><span id="dcv">0.960</span></label>
+    <button id="reset">reset</button>
+  </div>
+  <div id="credit">classic Physarum (Jones 2010): each agent senses trail ahead / ahead-left / ahead-right,
+    turns toward the strongest, moves, deposits · the field diffuses and decays each frame ·
+    <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
+</div>
+<script>
+'use strict';
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+
+// trail field at half resolution, scaled up to the canvas
+const FW = 350, FH = 350, CELLS = FW * FH;
+const off = document.createElement('canvas');
+off.width = FW; off.height = FH;
+const offCtx = off.getContext('2d');
+const img = offCtx.createImageData(FW, FH);
+const pix = img.data;
+
+const trail = new Float32Array(CELLS);
+const tmp = new Float32Array(CELLS);   // ping-pong buffer for the blur
+
+let N = 8000;
+let SENSOR_ANGLE = 25 * Math.PI / 180;
+let DECAY = 0.96;
+const SENSOR_DIST = 6;                 // field cells
+const TURN = 20 * Math.PI / 180;
+const SPEED = 1.0;                     // field cells per step
+const DEPOSIT = 1.0;
+const EXPOSURE = 10;                   // trail value -> palette index gain
+
+// flat typed arrays for agents: x, y, heading
+let ax = new Float32Array(N), ay = new Float32Array(N), ah = new Float32Array(N);
+
+// palette LUT: deep blue-black -> cyan -> white (bioluminescent)
+const LUT_R = new Uint8ClampedArray(256);
+const LUT_G = new Uint8ClampedArray(256);
+const LUT_B = new Uint8ClampedArray(256);
+(function buildLut() {
+  for (let i = 0; i < 256; i++) {
+    const t = i / 255;
+    let r, g, b;
+    if (t < 0.55) {
+      const u = t / 0.55;
+      r = 18 + (0 - 18) * u;
+      g = 18 + (190 - 18) * u;
+      b = 26 + (215 - 26) * u;
+    } else {
+      const u = (t - 0.55) / 0.45;
+      r = 0 + 255 * u;
+      g = 190 + (255 - 190) * u;
+      b = 215 + (255 - 215) * u;
+    }
+    LUT_R[i] = r; LUT_G[i] = g; LUT_B[i] = b;
+  }
+})();
+
+function initAgents() {
+  ax = new Float32Array(N); ay = new Float32Array(N); ah = new Float32Array(N);
+  const cx = FW / 2, cy = FH / 2, R = FW * 0.22;
+  for (let i = 0; i < N; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = R * Math.sqrt(Math.random());
+    ax[i] = cx + Math.cos(a) * r;
+    ay[i] = cy + Math.sin(a) * r;
+    ah[i] = Math.random() * Math.PI * 2;
+  }
+}
+
+function reset() {
+  initAgents();
+  trail.fill(0);
+  tmp.fill(0);
+}
+
+function sample(x, y) {
+  let ix = x | 0, iy = y | 0;
+  if (ix < 0) ix = 0; else if (ix >= FW) ix = FW - 1;
+  if (iy < 0) iy = 0; else if (iy >= FH) iy = FH - 1;
+  return trail[iy * FW + ix];
+}
+
+function step() {
+  for (let i = 0; i < N; i++) {
+    let x = ax[i], y = ay[i], h = ah[i];
+    // sense
+    const fwd = sample(x + Math.cos(h) * SENSOR_DIST, y + Math.sin(h) * SENSOR_DIST);
+    const lft = sample(x + Math.cos(h - SENSOR_ANGLE) * SENSOR_DIST,
+                       y + Math.sin(h - SENSOR_ANGLE) * SENSOR_DIST);
+    const rgt = sample(x + Math.cos(h + SENSOR_ANGLE) * SENSOR_DIST,
+                       y + Math.sin(h + SENSOR_ANGLE) * SENSOR_DIST);
+    // rotate: straight wins ties; both sides beating center -> random turn
+    if (fwd >= lft && fwd >= rgt) {
+      // keep heading
+    } else if (lft > fwd && rgt > fwd) {
+      h += Math.random() < 0.5 ? -TURN : TURN;
+    } else if (lft > rgt) {
+      h -= TURN;
+    } else {
+      h += TURN;
+    }
+    // move, bouncing off edges so trails stay on screen
+    x += Math.cos(h) * SPEED;
+    y += Math.sin(h) * SPEED;
+    if (x < 0) { x = 0; h = Math.PI - h; }
+    else if (x > FW - 1) { x = FW - 1; h = Math.PI - h; }
+    if (y < 0) { y = 0; h = -h; }
+    else if (y > FH - 1) { y = FH - 1; h = -h; }
+    ax[i] = x; ay[i] = y; ah[i] = h;
+    // deposit
+    trail[(y | 0) * FW + (x | 0)] += DEPOSIT;
+  }
+}
+
+// separable 3x3 box blur (trail -> tmp -> trail), decay folded into 2nd pass
+function diffuse() {
+  const third = 1 / 3, dk = DECAY / 3;
+  for (let y = 0; y < FH; y++) {          // horizontal pass
+    const row = y * FW;
+    tmp[row] = (trail[row] * 2 + trail[row + 1]) * third;
+    for (let x = 1; x < FW - 1; x++) {
+      const i = row + x;
+      tmp[i] = (trail[i - 1] + trail[i] + trail[i + 1]) * third;
+    }
+    const e = row + FW - 1;
+    tmp[e] = (trail[e - 1] + trail[e] * 2) * third;
+  }
+  for (let x = 0; x < FW; x++) {          // vertical pass edges + decay
+    trail[x] = (tmp[x] * 2 + tmp[x + FW]) * dk;
+    const last = (FH - 1) * FW + x;
+    trail[last] = (tmp[last - FW] + tmp[last] * 2) * dk;
+  }
+  for (let y = 1; y < FH - 1; y++) {      // vertical pass interior + decay
+    const row = y * FW;
+    for (let x = 0; x < FW; x++) {
+      const i = row + x;
+      trail[i] = (tmp[i - FW] + tmp[i] + tmp[i + FW]) * dk;
+    }
+  }
+}
+
+function render() {
+  for (let i = 0, p = 0; i < CELLS; i++, p += 4) {
+    let v = trail[i] * EXPOSURE;
+    if (v > 255) v = 255;
+    const k = v | 0;
+    pix[p] = LUT_R[k];
+    pix[p + 1] = LUT_G[k];
+    pix[p + 2] = LUT_B[k];
+    pix[p + 3] = 255;
+  }
+  offCtx.putImageData(img, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(off, 0, 0, W, H);
+}
+
+function frame() {
+  step();
+  diffuse();
+  render();
+  requestAnimationFrame(frame);
+}
+
+const $ = id => document.getElementById(id);
+$('n').oninput = e => { N = +e.target.value; $('nv').textContent = N; initAgents(); };
+$('sa').oninput = e => {
+  SENSOR_ANGLE = e.target.value * Math.PI / 180;
+  $('sav').textContent = e.target.value + '°';
+};
+$('dc').oninput = e => { DECAY = e.target.value / 1000; $('dcv').textContent = DECAY.toFixed(3); };
+$('reset').onclick = reset;
+
+reset();
+frame();
+</script>
+</body>
+</html>

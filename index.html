@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sketches</title>
+<style>
+  html, body { margin: 0; min-height: 100%; background: #0b0b10; color: #ddd;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  #wrap { max-width: 640px; margin: 0 auto; padding: 48px 20px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+  p.sub { color: #888; font-size: 13px; margin: 0 0 28px; }
+  ul { list-style: none; padding: 0; margin: 0; display: flex;
+    flex-direction: column; gap: 14px; }
+  li { background: #12121a; border: 1px solid #222233; border-radius: 8px;
+    padding: 14px 16px; }
+  li a.title { color: #8ab4f8; text-decoration: none; font-size: 15px; }
+  li a.title:hover { text-decoration: underline; }
+  li div.desc { color: #999; font-size: 12.5px; margin-top: 5px; line-height: 1.5; }
+  footer { margin-top: 32px; font-size: 11px; color: #666; }
+  footer a { color: #8ab4f8; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>sketches</h1>
+  <p class="sub">tiny local rules, surprising global behaviour</p>
+  <ul>
+    <li>
+      <a class="title" href="friend-enemy-dots/">friend-enemy-dots</a>
+      <div class="desc">Each dot picks one friend and one enemy: step toward the friend,
+        away from the enemy, drift toward centre. Clusters chase clusters.
+        After <a href="https://x.com/IsaacKing314/status/2086721066106253347">@IsaacKing314</a>.</div>
+    </li>
+    <li>
+      <a class="title" href="firefly-sync/">firefly-sync</a>
+      <div class="desc">Every firefly blinks on its own clock; a neighbour's flash nudges
+        its phase forward. Random twinkling tips into unified pulsing (Kuramoto synchronisation).</div>
+    </li>
+    <li>
+      <a class="title" href="rps-ecology/">rps-ecology</a>
+      <div class="desc">Three tribes in a cycle: each chases its prey and flees its predator,
+        converting on contact. Spiral waves and population booms from three lines of logic.</div>
+    </li>
+    <li>
+      <a class="title" href="slime-mold/">slime-mold</a>
+      <div class="desc">Thousands of agents deposit fading pheromone and steer toward density
+        (Physarum). Highways, junctions, and networks nobody designed.</div>
+    </li>
+    <li>
+      <a class="title" href="gossip-dynamics/">gossip-dynamics</a>
+      <div class="desc">Wandering dots hold opinions as colours, drifting toward who they trust
+        and away from who they distrust. Consensus, polarised camps, collapse.</div>
+    </li>
+  </ul>
+  <footer>source: <a href="https://github.com/unforcedagi/sketches">github.com/unforcedagi/sketches</a></footer>
+</div>
+</body>
+</html>

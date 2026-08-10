@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rock-Paper-Scissors Ecology</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0b10; color: #ddd;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  #wrap { display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 16px; box-sizing: border-box; height: 100%; }
+  canvas { background: #12121a; border-radius: 8px; max-width: 100%;
+    max-height: calc(100% - 90px); }
+  #controls { display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+    font-size: 13px; }
+  label { display: flex; gap: 6px; align-items: center; }
+  input[type=range] { width: 110px; }
+  button { background: #222233; color: #ddd; border: 1px solid #444;
+    border-radius: 6px; padding: 4px 12px; font: inherit; cursor: pointer; }
+  #credit { font-size: 11px; color: #777; }
+  a { color: #8ab4f8; }
+  .rock { color: #e15b5b; } .paper { color: #5b8de1; } .scis { color: #5be18a; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="700" height="700"></canvas>
+  <div id="controls">
+    <label>dots <input id="n" type="range" min="60" max="600" value="240"><span id="nv">240</span></label>
+    <label>speed <input id="sp" type="range" min="5" max="40" value="20"><span id="spv">2.0</span></label>
+    <label>radius <input id="cr" type="range" min="4" max="20" value="8"><span id="crv">8</span></label>
+    <button id="reset">reset</button>
+  </div>
+  <div id="credit">cycle: <span class="rock">rock (red)</span> beats
+    <span class="scis">scissors (green)</span> beats
+    <span class="paper">paper (blue)</span> beats
+    <span class="rock">rock (red)</span> ·
+    each dot chases its nearest prey, flees its nearest predator ·
+    touch converts prey to the predator's tribe ·
+    <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
+</div>
+<script>
+'use strict';
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+
+// tribes: 0 rock (red), 1 paper (blue), 2 scissors (green)
+// rock beats scissors, scissors beats paper, paper beats rock
+const COLORS = ['#e15b5b', '#5b8de1', '#5be18a'];
+const NAMES = ['rock', 'paper', 'scissors'];
+const PREY = t => (t + 2) % 3;      // the tribe t beats
+const PREDATOR = t => (t + 1) % 3;  // the tribe that beats t
+
+let N = 240;
+let SPEED = 2.0;       // max px/frame
+let RADIUS = 8;        // conversion (contact) distance
+const CHASE = 0.15;    // steering weight toward nearest prey
+const FLEE = CHASE * 1.2; // flee slightly stronger than chase
+const JITTER = 0.12;   // random wobble so stand-offs break
+const M = 5;           // wall margin
+
+let dots = [];
+let rings = [];        // conversion flash rings
+
+function init() {
+  dots = [];
+  rings = [];
+  for (let i = 0; i < N; i++) {
+    const a = Math.random() * Math.PI * 2;
+    dots.push({
+      x: M + Math.random() * (W - 2 * M),
+      y: M + Math.random() * (H - 2 * M),
+      vx: Math.cos(a), vy: Math.sin(a),
+      tribe: i % 3,
+    });
+  }
+}
+
+function step() {
+  for (let i = 0; i < N; i++) {
+    const d = dots[i];
+    const prey = PREY(d.tribe), pred = PREDATOR(d.tribe);
+    // one pass: nearest prey and nearest predator
+    let pj = -1, pd2 = Infinity, ej = -1, ed2 = Infinity;
+    for (let j = 0; j < N; j++) {
+      if (j === i) continue;
+      const o = dots[j];
+      if (o.tribe !== prey && o.tribe !== pred) continue;
+      const dx = o.x - d.x, dy = o.y - d.y, r2 = dx * dx + dy * dy;
+      if (o.tribe === prey) { if (r2 < pd2) { pd2 = r2; pj = j; } }
+      else { if (r2 < ed2) { ed2 = r2; ej = j; } }
+    }
+    // steer toward prey, away from predator, plus jitter
+    if (pj >= 0) {
+      const p = dots[pj], dist = Math.sqrt(pd2) || 1;
+      d.vx += (p.x - d.x) / dist * CHASE;
+      d.vy += (p.y - d.y) / dist * CHASE;
+    }
+    if (ej >= 0) {
+      const e = dots[ej], dist = Math.sqrt(ed2) || 1;
+      d.vx += (d.x - e.x) / dist * FLEE;
+      d.vy += (d.y - e.y) / dist * FLEE;
+    }
+    d.vx += (Math.random() - 0.5) * JITTER;
+    d.vy += (Math.random() - 0.5) * JITTER;
+    // cap speed
+    const v = Math.hypot(d.vx, d.vy);
+    if (v > SPEED) { d.vx *= SPEED / v; d.vy *= SPEED / v; }
+    // move, then clamp position but keep velocity so walls slide, not stick
+    d.x = Math.min(W - M, Math.max(M, d.x + d.vx));
+    d.y = Math.min(H - M, Math.max(M, d.y + d.vy));
+    // contact: convert nearest prey to this dot's tribe
+    if (pj >= 0 && pd2 < RADIUS * RADIUS) {
+      const p = dots[pj];
+      p.tribe = d.tribe;
+      rings.push({ x: p.x, y: p.y, r: 4, alpha: 1, color: COLORS[d.tribe] });
+    }
+  }
+  for (const r of rings) { r.r += 1.2; r.alpha -= 0.07; }
+  rings = rings.filter(r => r.alpha > 0);
+}
+
+function draw() {
+  // translucent clear leaves short motion trails
+  ctx.fillStyle = 'rgba(18, 18, 26, 0.35)';
+  ctx.fillRect(0, 0, W, H);
+  for (const d of dots) {
+    ctx.fillStyle = COLORS[d.tribe];
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  for (const r of rings) {
+    ctx.globalAlpha = Math.max(0, r.alpha);
+    ctx.strokeStyle = r.color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  // tribe-count bar, top-left corner
+  const counts = [0, 0, 0];
+  for (const d of dots) counts[d.tribe]++;
+  const bx = 10, by = 10, bw = 180, bh = 8;
+  let x = bx;
+  for (let t = 0; t < 3; t++) {
+    const w = bw * counts[t] / N;
+    ctx.fillStyle = COLORS[t];
+    ctx.fillRect(x, by, w, bh);
+    x += w;
+  }
+  ctx.fillStyle = '#999';
+  ctx.font = '11px ui-monospace, SFMono-Regular, Menlo, monospace';
+  ctx.fillText(NAMES.map((n, t) => n + ' ' + counts[t]).join(' · '), bx, by + bh + 13);
+}
+
+function frame() {
+  step();
+  draw();
+  requestAnimationFrame(frame);
+}
+
+const $ = id => document.getElementById(id);
+$('n').oninput = e => { N = +e.target.value; $('nv').textContent = N; init(); };
+$('sp').oninput = e => { SPEED = e.target.value / 10; $('spv').textContent = SPEED.toFixed(1); };
+$('cr').oninput = e => { RADIUS = +e.target.value; $('crv').textContent = RADIUS; };
+$('reset').onclick = init;
+
+init();
+frame();
+</script>
+</body>
+</html>
