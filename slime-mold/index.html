@@ -5,34 +5,108 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Slime Mold</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #0b0b10; color: #ddd;
+  html, body { margin: 0; min-height: 100%; background: #0b0b10; color: #ddd;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   #wrap { display: flex; flex-direction: column; align-items: center; gap: 10px;
-    padding: 16px; box-sizing: border-box; height: 100%; }
-  canvas { background: #12121a; border-radius: 8px; max-width: 100%;
-    max-height: calc(100% - 90px); }
-  #controls { display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
-    font-size: 13px; }
+    padding: 16px; box-sizing: border-box; }
+  canvas { background: #12121a; border-radius: 8px; max-width: 100%; cursor: crosshair; }
+  #controls, #controls2 { display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    justify-content: center; font-size: 12.5px; max-width: 720px; }
+  #controls2 { font-size: 11.5px; color: #8f8fa8; }
   label { display: flex; gap: 6px; align-items: center; }
   input[type=range] { width: 110px; }
+  #controls input[type=range] { width: 70px; }
+  #controls2 input[type=range] { width: 70px; }
   button { background: #222233; color: #ddd; border: 1px solid #444;
     border-radius: 6px; padding: 4px 12px; font: inherit; cursor: pointer; }
-  #credit { font-size: 11px; color: #777; }
+  #controls button { padding: 4px 9px; }
+  #modes { display: flex; gap: 4px; }
+  button.mode.active { background: #35355a; border-color: #8ab4f8; color: #fff; }
+  select { background: #222233; color: #ddd; border: 1px solid #444;
+    border-radius: 6px; padding: 3px 6px; font: inherit; }
+  #credit { font-size: 11px; color: #777; max-width: 640px; text-align: center; }
   a { color: #8ab4f8; }
+  #essay { max-width: 640px; font-size: 12.5px; line-height: 1.7; color: #a8a8b8;
+    margin-bottom: 24px; }
+  #essay summary { cursor: pointer; color: #777; font-size: 11px; text-align: center; }
+  #essay p { margin: 12px 0; }
+  #essay strong { color: #d8d8e4; }
+  /* paper theme (ink palette) */
+  body.paper { background: #f5f1e8; color: #2c261f; }
+  body.paper canvas { background: #faf7f0; }
+  body.paper button, body.paper select { background: #ebe5d8; color: #2c261f;
+    border-color: #c9bfae; }
+  body.paper button.mode.active { background: #d9d0bd; border-color: #7a5c33; color: #1c1610; }
+  body.paper #controls2 { color: #7d7365; }
+  body.paper #credit, body.paper #essay summary { color: #8d8272; }
+  body.paper #essay { color: #4c443a; }
+  body.paper #essay strong { color: #241e17; }
+  body.paper a { color: #7a5c33; }
 </style>
 </head>
 <body>
 <div id="wrap">
   <canvas id="c" width="700" height="700"></canvas>
   <div id="controls">
-    <label>agents <input id="n" type="range" min="1000" max="20000" step="500" value="8000"><span id="nv">8000</span></label>
-    <label>sensor angle <input id="sa" type="range" min="10" max="60" value="25"><span id="sav">25&deg;</span></label>
-    <label>decay <input id="dc" type="range" min="900" max="995" value="960"><span id="dcv">0.960</span></label>
+    <span id="modes">
+      <button id="m-food" class="mode active">food</button><button id="m-wall" class="mode">wall</button><button id="m-erase" class="mode">erase</button>
+    </span>
+    <label>brush <input id="br" type="range" min="2" max="16" value="6"><span id="brv">6</span></label>
+    <select id="pal">
+      <option value="bioluminescent">bioluminescent</option>
+      <option value="ember">ember</option>
+      <option value="aurora">aurora</option>
+      <option value="ink">ink</option>
+    </select>
+    <button class="preset" data-p="filigree">filigree</button><button class="preset" data-p="rivers">rivers</button><button class="preset" data-p="cells">cells</button><button class="preset" data-p="mist">mist</button>
     <button id="reset">reset</button>
+    <button id="clearpaint">clear paint</button>
+  </div>
+  <div id="controls2">
+    <label>agents <input id="n" type="range" min="1000" max="30000" step="500" value="18000"><span id="nv">18000</span></label>
+    <label>sensor angle <input id="sa" type="range" min="5" max="60" step="0.5" value="60"><span id="sav">60&deg;</span></label>
+    <label>sensor dist <input id="sd" type="range" min="2" max="20" value="4"><span id="sdv">4</span></label>
+    <label>turn <input id="tn" type="range" min="5" max="60" value="30"><span id="tnv">30&deg;</span></label>
+    <label>step <input id="sp" type="range" min="0.5" max="2" step="0.05" value="1"><span id="spv">1.00</span></label>
+    <label>decay <input id="dc" type="range" min="900" max="995" value="940"><span id="dcv">0.940</span></label>
   </div>
   <div id="credit">classic Physarum (Jones 2010): each agent senses trail ahead / ahead-left / ahead-right,
-    turns toward the strongest, moves, deposits · the field diffuses and decays each frame ·
+    turns toward the strongest, moves, deposits · paint food to grow highways, walls to reroute them ·
     <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
+  <details id="essay">
+    <summary>why this is interesting &mdash; philosophy &middot; technique &middot; aesthetics</summary>
+    <p><strong>Philosophy &mdash; infrastructure without planners.</strong> Physarum polycephalum
+      is a single cell, sometimes metres across, with no brain and no centre. It still solves
+      mazes, and when researchers laid oat flakes out in the pattern of Tokyo&rsquo;s suburbs, it
+      rebuilt the rail network overnight &mdash; comparably efficient, no engineer involved (Tero
+      et al., Science 2010). The trick is stigmergy: the agents never speak to each other. They
+      write to the world &mdash; a chemical trail &mdash; and read what the world says back. The
+      network is not in any agent; it lives in the field between them. That&rsquo;s also how
+      termite mounds, footpaths, markets, and Wikipedia work. When you paint food here, notice
+      what you&rsquo;re doing: you can&rsquo;t command a single agent, you can only change the
+      landscape&rsquo;s incentives &mdash; and the network reorganises itself around your change.
+      Governance by landscape, not by decree.</p>
+    <p><strong>Technique &mdash; two layers, four verbs.</strong> This is Jeff Jones&rsquo;s 2010
+      model: agents and a trail field, coupled. Each tick every agent does four things &mdash;
+      sense (three sniffs: ahead, ahead-left, ahead-right), turn toward the strongest, move,
+      deposit. Then the field does two: diffuse (a 3&times;3 blur) and decay. Diffusion is what
+      turns yesterday&rsquo;s paths into today&rsquo;s gradients &mdash; it widens a sharp trail
+      into a slope other agents can feel from a distance. Decay is forgetting, and it&rsquo;s
+      load-bearing: without it the field saturates and no path is better than any other. All the
+      pattern regimes live in ratios &mdash; sensor angle against turn angle sets the vocabulary
+      of curves an agent can draw; sensor distance sets the scale of the mesh; decay sets its
+      patience. Food is a cell that re-deposits every tick, a permanent rumour. Walls read as
+      dead air to the sensors, so agents steer off them before they ever touch.</p>
+    <p><strong>Aesthetics &mdash; the palette is an argument.</strong> Nothing here glows. The
+      glow is a claim we make by mapping trail density through a colour ramp &mdash; exposure
+      decides what counts as visible at all, and the ramp decides what the thing <em>is</em>.
+      Bioluminescent says deep-sea organism; ember says slow fire; ink says a cartographer drew
+      this &mdash; the same network, presented as evidence rather than creature. Isaac
+      King&rsquo;s dot sim, which started this whole set, takes the ink position: black marks on
+      paper, no trails, no drama, and it&rsquo;s mesmerising anyway because the motion carries
+      everything. Flip between ink and bioluminescent here and watch your own read of the system
+      change &mdash; same rules, same field, different ontology.</p>
+  </details>
 </div>
 <script src="../lib/gifenc.js"></script>
 <script src="../lib/controls.js"></script>
@@ -51,71 +125,108 @@ const pix = img.data;
 
 const trail = new Float32Array(CELLS);
 const tmp = new Float32Array(CELLS);   // ping-pong buffer for the blur
+const food = new Float32Array(CELLS);  // permanent per-tick emitters (painted)
+const wall = new Uint8Array(CELLS);    // impassable cells (painted)
 
-let N = 8000;
-let SENSOR_ANGLE = 25 * Math.PI / 180;
-let DECAY = 0.96;
-const SENSOR_DIST = 6;                 // field cells
-const TURN = 20 * Math.PI / 180;
-const SPEED = 1.0;                     // field cells per step
+// --- parameters (all slider-driven) ---
+let N = 18000;
+let saDeg = 60, SENSOR_ANGLE = saDeg * Math.PI / 180;
+let SENSOR_DIST = 4;                   // field cells
+let tnDeg = 30, TURN = tnDeg * Math.PI / 180;
+let SPEED = 1.0;                       // field cells per step
+let DECAY = 0.94;
 const DEPOSIT = 1.0;
-const EXPOSURE = 10;                   // trail value -> palette index gain
+const FOOD_AMT = 3.0;                  // trail added per food cell per tick
+const WALL_SENSE = -10;                // walls read as strongly negative
+// exposure normalised against decay so every regime renders at similar
+// brightness (steady-state trail scales like 1/(1-decay))
+let EXPOSURE = 10;
+function updateExposure() {
+  EXPOSURE = Math.min(30, Math.max(3, 250 * (1 - DECAY)));
+}
 
 // flat typed arrays for agents: x, y, heading
 let ax = new Float32Array(N), ay = new Float32Array(N), ah = new Float32Array(N);
 
-// palette LUT: deep blue-black -> cyan -> white (bioluminescent)
+// --- palettes: 256-entry LUTs built from gradient stops ---
 const LUT_R = new Uint8ClampedArray(256);
 const LUT_G = new Uint8ClampedArray(256);
 const LUT_B = new Uint8ClampedArray(256);
-(function buildLut() {
+let WALL_R = 70, WALL_G = 76, WALL_B = 92, PAPER = false;
+const PALETTES = {
+  bioluminescent: { wall: [70, 76, 92],
+    stops: [[0, 18, 18, 26], [0.55, 0, 190, 215], [1, 255, 255, 255]] },
+  ember: { wall: [88, 72, 64],
+    stops: [[0, 14, 7, 6], [0.35, 112, 14, 8], [0.7, 242, 120, 26], [1, 255, 244, 214]] },
+  aurora: { wall: [64, 74, 72],
+    stops: [[0, 7, 10, 13], [0.38, 14, 148, 108], [0.72, 138, 96, 214], [1, 226, 255, 236]] },
+  ink: { wall: [176, 166, 150], paper: true,   // inverted: high trail = dark ink on paper
+    stops: [[0, 250, 247, 240], [0.3, 214, 204, 187], [0.65, 118, 96, 74], [1, 28, 22, 17]] },
+};
+function setPalette(name) {
+  const p = PALETTES[name], st = p.stops;
   for (let i = 0; i < 256; i++) {
     const t = i / 255;
-    let r, g, b;
-    if (t < 0.55) {
-      const u = t / 0.55;
-      r = 18 + (0 - 18) * u;
-      g = 18 + (190 - 18) * u;
-      b = 26 + (215 - 26) * u;
-    } else {
-      const u = (t - 0.55) / 0.45;
-      r = 0 + 255 * u;
-      g = 190 + (255 - 190) * u;
-      b = 215 + (255 - 215) * u;
+    let a = st[st.length - 2], b = st[st.length - 1];
+    for (let s = 0; s < st.length - 1; s++) {
+      if (t >= st[s][0] && t <= st[s + 1][0]) { a = st[s]; b = st[s + 1]; break; }
     }
-    LUT_R[i] = r; LUT_G[i] = g; LUT_B[i] = b;
+    const u = (t - a[0]) / ((b[0] - a[0]) || 1);
+    LUT_R[i] = a[1] + (b[1] - a[1]) * u;
+    LUT_G[i] = a[2] + (b[2] - a[2]) * u;
+    LUT_B[i] = a[3] + (b[3] - a[3]) * u;
   }
-})();
+  WALL_R = p.wall[0]; WALL_G = p.wall[1]; WALL_B = p.wall[2];
+  PAPER = !!p.paper;
+  document.body.classList.toggle('paper', PAPER);
+}
 
 function initAgents() {
   ax = new Float32Array(N); ay = new Float32Array(N); ah = new Float32Array(N);
-  const cx = FW / 2, cy = FH / 2, R = FW * 0.22;
+  // uniform seeding: the network condenses out of the whole field (a central
+  // disc collapses into a single ring under Jones-default parameters)
   for (let i = 0; i < N; i++) {
-    const a = Math.random() * Math.PI * 2;
-    const r = R * Math.sqrt(Math.random());
-    ax[i] = cx + Math.cos(a) * r;
-    ay[i] = cy + Math.sin(a) * r;
+    ax[i] = Math.random() * FW;
+    ay[i] = Math.random() * FH;
     ah[i] = Math.random() * Math.PI * 2;
   }
 }
 
-function reset() {
+// change agent count without disturbing the ones already working the network
+function resizeAgents(n) {
+  const nx = new Float32Array(n), ny = new Float32Array(n), nh = new Float32Array(n);
+  const keep = Math.min(n, N);
+  nx.set(ax.subarray(0, keep)); ny.set(ay.subarray(0, keep)); nh.set(ah.subarray(0, keep));
+  for (let i = keep; i < n; i++) {
+    nx[i] = Math.random() * FW; ny[i] = Math.random() * FH;
+    nh[i] = Math.random() * Math.PI * 2;
+  }
+  ax = nx; ay = ny; ah = nh; N = n;
+}
+
+function reset() {           // clears trail + agents, KEEPS painted food/walls
   initAgents();
   trail.fill(0);
   tmp.fill(0);
+}
+
+function clearPaint() {      // wipes painted food/walls only
+  food.fill(0);
+  wall.fill(0);
 }
 
 function sample(x, y) {
   let ix = x | 0, iy = y | 0;
   if (ix < 0) ix = 0; else if (ix >= FW) ix = FW - 1;
   if (iy < 0) iy = 0; else if (iy >= FH) iy = FH - 1;
-  return trail[iy * FW + ix];
+  const i = iy * FW + ix;
+  return wall[i] ? WALL_SENSE : trail[i];
 }
 
 function moveAgents() {
   for (let i = 0; i < N; i++) {
     let x = ax[i], y = ay[i], h = ah[i];
-    // sense
+    // sense (walls sample as strongly negative, so agents steer off early)
     const fwd = sample(x + Math.cos(h) * SENSOR_DIST, y + Math.sin(h) * SENSOR_DIST);
     const lft = sample(x + Math.cos(h - SENSOR_ANGLE) * SENSOR_DIST,
                        y + Math.sin(h - SENSOR_ANGLE) * SENSOR_DIST);
@@ -132,15 +243,21 @@ function moveAgents() {
       h += TURN;
     }
     // move, bouncing off edges so trails stay on screen
-    x += Math.cos(h) * SPEED;
-    y += Math.sin(h) * SPEED;
-    if (x < 0) { x = 0; h = Math.PI - h; }
-    else if (x > FW - 1) { x = FW - 1; h = Math.PI - h; }
-    if (y < 0) { y = 0; h = -h; }
-    else if (y > FH - 1) { y = FH - 1; h = -h; }
+    let nx = x + Math.cos(h) * SPEED;
+    let ny = y + Math.sin(h) * SPEED;
+    if (nx < 0) { nx = 0; h = Math.PI - h; }
+    else if (nx > FW - 1) { nx = FW - 1; h = Math.PI - h; }
+    if (ny < 0) { ny = 0; h = -h; }
+    else if (ny > FH - 1) { ny = FH - 1; h = -h; }
+    const ci = (ny | 0) * FW + (nx | 0);
+    if (wall[ci]) {
+      // blocked: stay put, pick a fresh heading
+      h = Math.random() * Math.PI * 2;
+    } else {
+      x = nx; y = ny;
+      trail[ci] += DEPOSIT;
+    }
     ax[i] = x; ay[i] = y; ah[i] = h;
-    // deposit
-    trail[(y | 0) * FW + (x | 0)] += DEPOSIT;
   }
 }
 
@@ -171,38 +288,165 @@ function diffuse() {
   }
 }
 
-// one full simulation tick: agents sense/rotate/move/deposit, then the field
-// diffuses and decays — rendering lives in draw() so multiple ticks per
-// display frame don't pay for multiple renders
+// one full simulation tick: agents sense/rotate/move/deposit, food cells emit,
+// then the field diffuses and decays — rendering lives in draw() so multiple
+// ticks per display frame don't pay for multiple renders
 function step() {
   moveAgents();
+  for (let i = 0; i < CELLS; i++) trail[i] += food[i];  // permanent emitters
   diffuse();
 }
 
+// --- brush ---
+let mode = 'food', brushR = 6;
+let painting = false, cursorOn = false, cursorX = 0, cursorY = 0;
+let lastPX = null, lastPY = null;
+
+function evtField(e) {
+  const r = cv.getBoundingClientRect();
+  return [(e.clientX - r.left) * (cv.width / r.width) / 2,
+          (e.clientY - r.top) * (cv.height / r.height) / 2];
+}
+
+function paintAt(fx, fy) {
+  const r = brushR, r2 = r * r;
+  const x0 = Math.max(0, Math.ceil(fx - r)), x1 = Math.min(FW - 1, Math.floor(fx + r));
+  const y0 = Math.max(0, Math.ceil(fy - r)), y1 = Math.min(FH - 1, Math.floor(fy + r));
+  for (let y = y0; y <= y1; y++) {
+    const dy = y - fy, row = y * FW;
+    for (let x = x0; x <= x1; x++) {
+      const dx = x - fx;
+      if (dx * dx + dy * dy > r2) continue;
+      const i = row + x;
+      if (mode === 'food') { if (!wall[i]) food[i] = FOOD_AMT; }
+      else if (mode === 'wall') { wall[i] = 1; food[i] = 0; trail[i] = 0; }
+      else { food[i] = 0; wall[i] = 0; trail[i] = 0; }
+    }
+  }
+}
+
+function paintStroke(fx, fy) {   // interpolate so fast drags leave no gaps
+  if (lastPX === null) {
+    paintAt(fx, fy);
+  } else {
+    const dx = fx - lastPX, dy = fy - lastPY;
+    const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / (brushR * 0.5)));
+    for (let s = 1; s <= steps; s++) paintAt(lastPX + dx * s / steps, lastPY + dy * s / steps);
+  }
+  lastPX = fx; lastPY = fy;
+}
+
+cv.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  painting = true; lastPX = null;
+  const [fx, fy] = evtField(e);
+  cursorX = fx; cursorY = fy;
+  paintStroke(fx, fy);
+});
+cv.addEventListener('mousemove', e => {
+  const [fx, fy] = evtField(e);
+  cursorX = fx; cursorY = fy;
+  if (painting) paintStroke(fx, fy);
+});
+cv.addEventListener('mouseenter', () => { cursorOn = true; });
+cv.addEventListener('mouseleave', () => { cursorOn = false; lastPX = null; });
+window.addEventListener('mouseup', () => { painting = false; lastPX = null; });
+
 function draw(alpha) { // alpha ignored: the field itself is the smoothing
   for (let i = 0, p = 0; i < CELLS; i++, p += 4) {
-    let v = trail[i] * EXPOSURE;
-    if (v > 255) v = 255;
-    const k = v | 0;
-    pix[p] = LUT_R[k];
-    pix[p + 1] = LUT_G[k];
-    pix[p + 2] = LUT_B[k];
+    if (wall[i]) {
+      pix[p] = WALL_R; pix[p + 1] = WALL_G; pix[p + 2] = WALL_B;
+    } else {
+      let v = trail[i] * EXPOSURE;
+      if (v > 255) v = 255;
+      const k = v | 0;
+      pix[p] = LUT_R[k]; pix[p + 1] = LUT_G[k]; pix[p + 2] = LUT_B[k];
+    }
     pix[p + 3] = 255;
   }
   offCtx.putImageData(img, 0, 0);
   ctx.imageSmoothingEnabled = true;
   ctx.drawImage(off, 0, 0, W, H);
+  // brush cursor preview — only while the pointer is over the canvas, so
+  // gif recordings without the mouse there stay clean
+  if (cursorOn) {
+    ctx.beginPath();
+    ctx.arc(cursorX * 2, cursorY * 2, brushR * 2, 0, Math.PI * 2);
+    ctx.strokeStyle = PAPER ? 'rgba(44,38,31,0.6)' : 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 1.5;
+    if (mode === 'erase') ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
 }
 
+// --- UI wiring ---
 const $ = id => document.getElementById(id);
-$('n').oninput = e => { N = +e.target.value; $('nv').textContent = N; initAgents(); };
-$('sa').oninput = e => {
-  SENSOR_ANGLE = e.target.value * Math.PI / 180;
-  $('sav').textContent = e.target.value + '°';
-};
-$('dc').oninput = e => { DECAY = e.target.value / 1000; $('dcv').textContent = DECAY.toFixed(3); };
-$('reset').onclick = reset;
 
+function syncUI() {
+  $('n').value = N; $('nv').textContent = N;
+  $('sa').value = saDeg; $('sav').textContent = saDeg + '°';
+  $('sd').value = SENSOR_DIST; $('sdv').textContent = SENSOR_DIST;
+  $('tn').value = tnDeg; $('tnv').textContent = tnDeg + '°';
+  $('sp').value = SPEED; $('spv').textContent = SPEED.toFixed(2);
+  $('dc').value = Math.round(DECAY * 1000); $('dcv').textContent = DECAY.toFixed(3);
+}
+
+$('n').oninput = e => { resizeAgents(+e.target.value); $('nv').textContent = N; };
+$('sa').oninput = e => {
+  saDeg = +e.target.value; SENSOR_ANGLE = saDeg * Math.PI / 180;
+  $('sav').textContent = saDeg + '°';
+};
+$('sd').oninput = e => { SENSOR_DIST = +e.target.value; $('sdv').textContent = SENSOR_DIST; };
+$('tn').oninput = e => {
+  tnDeg = +e.target.value; TURN = tnDeg * Math.PI / 180;
+  $('tnv').textContent = tnDeg + '°';
+};
+$('sp').oninput = e => { SPEED = +e.target.value; $('spv').textContent = SPEED.toFixed(2); };
+$('dc').oninput = e => {
+  DECAY = e.target.value / 1000; updateExposure();
+  $('dcv').textContent = DECAY.toFixed(3);
+};
+$('br').oninput = e => { brushR = +e.target.value; $('brv').textContent = brushR; };
+
+for (const m of ['food', 'wall', 'erase']) {
+  $('m-' + m).onclick = () => {
+    mode = m;
+    for (const b of document.querySelectorAll('button.mode')) b.classList.remove('active');
+    $('m-' + m).classList.add('active');
+  };
+}
+
+// presets: set parameter combos; painted food/walls and agents are untouched
+// (except rivers, which raises the agent count)
+const PRESETS = {
+  filigree: { sa: 60,   turn: 30, sd: 4,  decay: 0.94,  speed: 1.0, n: 18000 },
+  rivers:   { sa: 45,   turn: 25, sd: 14, decay: 0.985, speed: 1.0, n: 16000 },
+  cells:    { sa: 60,   turn: 30, sd: 10, decay: 0.96,  speed: 1.0, n: 30000 },
+  mist:     { sa: 10,   turn: 60, sd: 2,  decay: 0.92,  speed: 1.5, n: 16000 },
+};
+function applyPreset(name) {
+  const p = PRESETS[name];
+  saDeg = p.sa; SENSOR_ANGLE = saDeg * Math.PI / 180;
+  tnDeg = p.turn; TURN = tnDeg * Math.PI / 180;
+  SENSOR_DIST = p.sd;
+  DECAY = p.decay; updateExposure();
+  SPEED = p.speed;
+  if (p.n && p.n !== N) resizeAgents(p.n);
+  syncUI();
+}
+for (const b of document.querySelectorAll('button.preset')) {
+  b.onclick = () => applyPreset(b.dataset.p);
+}
+
+$('pal').onchange = e => setPalette(e.target.value);
+$('reset').onclick = reset;
+$('clearpaint').onclick = clearPaint;
+
+setPalette('bioluminescent');
+updateExposure();
+syncUI();
 reset();
 SketchControls.attach({ canvas: cv, step, draw, ticksPerSecond: 60 });
 </script>
