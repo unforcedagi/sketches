@@ -14,13 +14,37 @@
     justify-content: center; font-size: 12.5px; max-width: 720px; }
   #controls2 { font-size: 11.5px; color: #8f8fa8; }
   label { display: flex; gap: 6px; align-items: center; }
+  /* header: what this is, in one breath */
+  #head { width: 700px; max-width: 100%; margin: 2px 0 2px; }
+  #head h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.02em;
+    margin: 0; color: #e6e6f0; }
+  #tag { font-size: 12px; color: #8f8fa8; margin: 3px 0 0; }
+  #try { font-size: 11.5px; color: #b0b0c2; margin: 9px 0 0; line-height: 1.6;
+    border-left: 2px solid #3d3d5c; background: rgba(255,255,255,0.035);
+    padding: 5px 10px; border-radius: 0 5px 5px 0; }
+  #try .lead { color: #6f6f8c; text-transform: uppercase; letter-spacing: 0.09em;
+    font-size: 10px; margin-right: 4px; }
+  #try .k-food { color: #ffc440; font-weight: 600; }
+  #try .k-wall { color: #c98a5e; font-weight: 600; }
+  /* faint group labels so the control strip reads in three chunks */
+  .glabel { font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase;
+    color: #5c5c78; }
+  .grp { display: inline-flex; gap: 8px; align-items: center; }
+  /* mode-button swatches: the legend lives on the button */
+  button.mode { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 10px; height: 10px; display: inline-block; flex: none;
+    border-radius: 2px; box-sizing: border-box; }
+  .sw-food { border-radius: 50%; background: #ffc440; }
+  .sw-wall { background: repeating-linear-gradient(45deg,
+      #a8714c 0 2px, #4a3226 2px 4px); border: 1px solid rgba(0,0,0,0.35); }
+  .sw-erase { background: transparent; border: 1px dashed #9a9ab0; }
   input[type=range] { width: 110px; }
   #controls input[type=range] { width: 70px; }
   #controls2 input[type=range] { width: 70px; }
   button { background: #222233; color: #ddd; border: 1px solid #444;
     border-radius: 6px; padding: 4px 12px; font: inherit; cursor: pointer; }
   #controls button { padding: 4px 9px; }
-  #modes { display: flex; gap: 4px; }
+  #modes, #presets { display: flex; gap: 4px; }
   button.mode.active { background: #35355a; border-color: #8ab4f8; color: #fff; }
   select { background: #222233; color: #ddd; border: 1px solid #444;
     border-radius: 6px; padding: 3px 6px; font: inherit; }
@@ -38,6 +62,18 @@
     border-color: #c9bfae; }
   body.paper button.mode.active { background: #d9d0bd; border-color: #7a5c33; color: #1c1610; }
   body.paper #controls2 { color: #7d7365; }
+  body.paper #head h1 { color: #241e17; }
+  body.paper #tag { color: #7d7365; }
+  body.paper #try { color: #4c443a; border-left-color: #c1b49c;
+    background: rgba(120, 96, 60, 0.07); }
+  body.paper #try .lead { color: #9a8f7c; }
+  body.paper #try .k-food { color: #943a24; }
+  body.paper #try .k-wall { color: #5c6068; }
+  body.paper .glabel { color: #a2977f; }
+  body.paper .sw-food { background: #943a24; }
+  body.paper .sw-wall { background: repeating-linear-gradient(45deg,
+      #70747c 0 2px, #ced0d6 2px 4px); }
+  body.paper .sw-erase { border-color: #8a7f6c; }
   body.paper #credit, body.paper #essay summary { color: #8d8272; }
   body.paper #essay { color: #4c443a; }
   body.paper #essay strong { color: #241e17; }
@@ -46,23 +82,41 @@
 </head>
 <body>
 <div id="wrap">
+  <header id="head">
+    <h1>Slime mold</h1>
+    <p id="tag">thousands of simple agents share one chemical field &mdash; highways emerge with
+      no planner.</p>
+    <p id="try"><span class="lead">try</span> paint two blobs of <span class="k-food">food</span>
+      &rarr; watch a highway form between them &rarr; switch to <span class="k-wall">wall</span>
+      and cut it &mdash; the network reroutes.</p>
+  </header>
   <canvas id="c" width="700" height="700"></canvas>
   <div id="controls">
-    <span id="modes">
-      <button id="m-food" class="mode active">food</button><button id="m-wall" class="mode">wall</button><button id="m-erase" class="mode">erase</button>
+    <span class="grp">
+      <span class="glabel">paint</span>
+      <span id="modes">
+        <button id="m-food" class="mode active"><i class="sw sw-food"></i>food</button><button id="m-wall" class="mode"><i class="sw sw-wall"></i>wall</button><button id="m-erase" class="mode"><i class="sw sw-erase"></i>erase</button>
+      </span>
+      <label>brush <input id="br" type="range" min="2" max="16" value="6"><span id="brv">6</span></label>
     </span>
-    <label>brush <input id="br" type="range" min="2" max="16" value="6"><span id="brv">6</span></label>
-    <select id="pal">
-      <option value="bioluminescent">bioluminescent</option>
-      <option value="ember">ember</option>
-      <option value="aurora">aurora</option>
-      <option value="ink">ink</option>
-    </select>
-    <button class="preset" data-p="filigree">filigree</button><button class="preset" data-p="rivers">rivers</button><button class="preset" data-p="cells">cells</button><button class="preset" data-p="mist">mist</button>
-    <button id="reset">reset</button>
-    <button id="clearpaint">clear paint</button>
+    <span class="grp">
+      <span class="glabel">look</span>
+      <select id="pal">
+        <option value="bioluminescent">bioluminescent</option>
+        <option value="ember">ember</option>
+        <option value="aurora">aurora</option>
+        <option value="ink">ink</option>
+      </select>
+      <span id="presets"><button class="preset" data-p="filigree">filigree</button><button class="preset" data-p="rivers">rivers</button><button class="preset" data-p="cells">cells</button><button class="preset" data-p="mist">mist</button></span>
+    </span>
+    <span class="grp">
+      <span class="glabel">run</span>
+      <button id="reset">reset</button>
+      <button id="clearpaint">clear paint</button>
+    </span>
   </div>
   <div id="controls2">
+    <span class="glabel">tune</span>
     <label>agents <input id="n" type="range" min="1000" max="30000" step="500" value="18000"><span id="nv">18000</span></label>
     <label>sensor angle <input id="sa" type="range" min="5" max="60" step="0.5" value="60"><span id="sav">60&deg;</span></label>
     <label>sensor dist <input id="sd" type="range" min="2" max="20" value="4"><span id="sdv">4</span></label>
@@ -152,15 +206,22 @@ let ax = new Float32Array(N), ay = new Float32Array(N), ah = new Float32Array(N)
 const LUT_R = new Uint8ClampedArray(256);
 const LUT_G = new Uint8ClampedArray(256);
 const LUT_B = new Uint8ClampedArray(256);
-let WALL_R = 70, WALL_G = 76, WALL_B = 92, PAPER = false;
+// walls are drawn as a two-tone diagonal hatch in a hue deliberately OFF the
+// trail ramp (warm walls under cool trails, cool walls under warm trails) so
+// "solid matter" never reads as "bright trail"; food cells get a marker colour
+// blended over the trail colour so a painted emitter reads as a place, not a peak
+let WALL_A = [96, 62, 44], WALL_B = [58, 38, 28];
+let FOOD_C = [255, 196, 64], PAPER = false;
+const FOOD_MIX = 0.55;
 const PALETTES = {
-  bioluminescent: { wall: [70, 76, 92],
+  bioluminescent: { wall: [[96, 62, 44], [58, 38, 28]], food: [255, 196, 64],
     stops: [[0, 18, 18, 26], [0.55, 0, 190, 215], [1, 255, 255, 255]] },
-  ember: { wall: [88, 72, 64],
+  ember: { wall: [[70, 92, 128], [38, 52, 78]], food: [255, 196, 64],
     stops: [[0, 14, 7, 6], [0.35, 112, 14, 8], [0.7, 242, 120, 26], [1, 255, 244, 214]] },
-  aurora: { wall: [64, 74, 72],
+  aurora: { wall: [[112, 74, 44], [66, 42, 26]], food: [255, 196, 64],
     stops: [[0, 7, 10, 13], [0.38, 14, 148, 108], [0.72, 138, 96, 214], [1, 226, 255, 236]] },
-  ink: { wall: [176, 166, 150], paper: true,   // inverted: high trail = dark ink on paper
+  ink: { wall: [[112, 116, 124], [206, 208, 214]], food: [148, 58, 36], paper: true,
+    // inverted: high trail = dark ink on paper; walls are pencil cross-hatch
     stops: [[0, 250, 247, 240], [0.3, 214, 204, 187], [0.65, 118, 96, 74], [1, 28, 22, 17]] },
 };
 function setPalette(name) {
@@ -176,7 +237,7 @@ function setPalette(name) {
     LUT_G[i] = a[2] + (b[2] - a[2]) * u;
     LUT_B[i] = a[3] + (b[3] - a[3]) * u;
   }
-  WALL_R = p.wall[0]; WALL_G = p.wall[1]; WALL_B = p.wall[2];
+  WALL_A = p.wall[0]; WALL_B = p.wall[1]; FOOD_C = p.food;
   PAPER = !!p.paper;
   document.body.classList.toggle('paper', PAPER);
 }
@@ -354,16 +415,27 @@ cv.addEventListener('mouseleave', () => { cursorOn = false; lastPX = null; });
 window.addEventListener('mouseup', () => { painting = false; lastPX = null; });
 
 function draw(alpha) { // alpha ignored: the field itself is the smoothing
-  for (let i = 0, p = 0; i < CELLS; i++, p += 4) {
-    if (wall[i]) {
-      pix[p] = WALL_R; pix[p + 1] = WALL_G; pix[p + 2] = WALL_B;
-    } else {
-      let v = trail[i] * EXPOSURE;
-      if (v > 255) v = 255;
-      const k = v | 0;
-      pix[p] = LUT_R[k]; pix[p + 1] = LUT_G[k]; pix[p + 2] = LUT_B[k];
+  const wa = WALL_A, wb = WALL_B, fc = FOOD_C;
+  for (let y = 0, i = 0, p = 0; y < FH; y++) {
+    for (let x = 0; x < FW; x++, i++, p += 4) {
+      if (wall[i]) {
+        // 3-on-3-off diagonal stripes (6 canvas px at 2x) => obvious solid matter
+        const w = ((x + y) % 6) < 3 ? wa : wb;
+        pix[p] = w[0]; pix[p + 1] = w[1]; pix[p + 2] = w[2];
+      } else {
+        let v = trail[i] * EXPOSURE;
+        if (v > 255) v = 255;
+        const k = v | 0;
+        let r = LUT_R[k], g = LUT_G[k], b = LUT_B[k];
+        if (food[i] > 0) {          // painted emitter: mark it as its own thing
+          r += (fc[0] - r) * FOOD_MIX;
+          g += (fc[1] - g) * FOOD_MIX;
+          b += (fc[2] - b) * FOOD_MIX;
+        }
+        pix[p] = r; pix[p + 1] = g; pix[p + 2] = b;
+      }
+      pix[p + 3] = 255;
     }
-    pix[p + 3] = 255;
   }
   offCtx.putImageData(img, 0, 0);
   ctx.imageSmoothingEnabled = true;
