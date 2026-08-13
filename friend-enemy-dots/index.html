@@ -14,6 +14,22 @@
   #controls { display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
     font-size: 13px; }
   label { display: flex; gap: 6px; align-items: center; }
+  /* header: what this is, in one breath */
+  #head { width: 700px; max-width: 100%; margin: 2px 0 2px; }
+  #head h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.02em;
+    margin: 0; color: #e6e6f0; }
+  #tag { font-size: 12px; color: #8f8fa8; margin: 3px 0 0; }
+  #try { font-size: 11.5px; color: #b0b0c2; margin: 9px 0 0; line-height: 1.6;
+    border-left: 2px solid #3d3d5c; background: rgba(255,255,255,0.035);
+    padding: 5px 10px; border-radius: 0 5px 5px 0; }
+  #try .lead { color: #6f6f8c; text-transform: uppercase; letter-spacing: 0.09em;
+    font-size: 10px; margin-right: 4px; }
+  #try .k-friend { color: #6fd6a0; font-weight: 600; }
+  #try .k-enemy { color: #e15b5b; font-weight: 600; }
+  /* faint group labels so the control strip reads in chunks */
+  .glabel { font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase;
+    color: #5c5c78; }
+  .grp { display: inline-flex; gap: 8px; align-items: center; }
   input[type=range] { width: 110px; }
   button { background: #222233; color: #ddd; border: 1px solid #444;
     border-radius: 6px; padding: 4px 12px; font: inherit; cursor: pointer; }
@@ -23,12 +39,29 @@
 </head>
 <body>
 <div id="wrap">
+  <header id="head">
+    <h1>Friend / enemy dots</h1>
+    <p id="tag">each dot picks one friend and one enemy, then every tick takes a fixed-size step
+      toward the friend and away from the enemy &mdash; direction matters, distance doesn't.</p>
+    <p id="try"><span class="lead">try</span> crank <span class="k-enemy">enemy step</span> above
+      <span class="k-friend">friend step</span> and the swarm shatters into fleeing knots &mdash; drop it
+      back down and clumps of friends pull themselves back together.</p>
+  </header>
   <canvas id="c" width="700" height="700"></canvas>
   <div id="controls">
-    <label>dots <input id="n" type="range" min="20" max="600" value="250"><span id="nv">250</span></label>
-    <label>friend step <input id="fp" type="range" min="0" max="50" value="22"><span id="fpv">2.2</span></label>
-    <label>enemy step <input id="ep" type="range" min="0" max="50" value="12"><span id="epv">1.2</span></label>
-    <button id="reset">reset</button>
+    <span class="grp">
+      <span class="glabel">population</span>
+      <label>dots <input id="n" type="range" min="20" max="600" value="250"><span id="nv">250</span></label>
+    </span>
+    <span class="grp">
+      <span class="glabel">tune</span>
+      <label>friend step <input id="fp" type="range" min="0" max="50" value="22"><span id="fpv">2.2</span></label>
+      <label>enemy step <input id="ep" type="range" min="0" max="50" value="12"><span id="epv">1.2</span></label>
+    </span>
+    <span class="grp">
+      <span class="glabel">run</span>
+      <button id="reset">reset</button>
+    </span>
   </div>
   <div id="credit">rules: each dot picks one friend + one enemy · each tick: 0.5% toward centre,
     a fixed large step toward friend, a fixed small step away from enemy · dots occasionally re-choose ·

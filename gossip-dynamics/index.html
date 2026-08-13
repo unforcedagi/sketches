@@ -14,6 +14,22 @@
   #controls { display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
     font-size: 13px; }
   label { display: flex; gap: 6px; align-items: center; }
+  /* header: what this is, in one breath */
+  #head { width: 700px; max-width: 100%; margin: 2px 0 2px; }
+  #head h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.02em;
+    margin: 0; color: #e6e6f0; }
+  #tag { font-size: 12px; color: #8f8fa8; margin: 3px 0 0; }
+  #try { font-size: 11.5px; color: #b0b0c2; margin: 9px 0 0; line-height: 1.6;
+    border-left: 2px solid #3d3d5c; background: rgba(255,255,255,0.035);
+    padding: 5px 10px; border-radius: 0 5px 5px 0; }
+  #try .lead { color: #6f6f8c; text-transform: uppercase; letter-spacing: 0.09em;
+    font-size: 10px; margin-right: 4px; }
+  #try .k-trust { color: #6fd6ff; font-weight: 600; }
+  #try .k-distrust { color: #e15b5b; font-weight: 600; }
+  /* faint group labels so the control strip reads in chunks */
+  .glabel { font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase;
+    color: #5c5c78; }
+  .grp { display: inline-flex; gap: 8px; align-items: center; }
   input[type=range] { width: 110px; }
   button { background: #222233; color: #ddd; border: 1px solid #444;
     border-radius: 6px; padding: 4px 12px; font: inherit; cursor: pointer; }
@@ -23,14 +39,34 @@
 </head>
 <body>
 <div id="wrap">
+  <header id="head">
+    <h1>Gossip dynamics</h1>
+    <p id="tag">every dot's opinion-hue drifts toward one trusted neighbour, away from one distrusted
+      one, and gently toward whoever wanders close.</p>
+    <p id="try"><span class="lead">try</span> raise <span class="k-distrust">distrust</span> well above
+      <span class="k-trust">trust</span> and let it run &mdash; the crowd stops blending into one colour
+      and splits into stable, warring camps instead.</p>
+  </header>
   <canvas id="c" width="700" height="700"></canvas>
   <div id="controls">
-    <label>dots <input id="n" type="range" min="40" max="500" value="200"><span id="nv">200</span></label>
-    <label>trust <input id="tr" type="range" min="0" max="20" value="5"><span id="trv">0.05</span></label>
-    <label>distrust <input id="dt" type="range" min="0" max="20" value="2"><span id="dtv">0.02</span></label>
-    <label>radius <input id="rad" type="range" min="0" max="150" value="60"><span id="radv">60</span></label>
-    <label><input id="links" type="checkbox" checked> trust links</label>
-    <button id="reset">reset</button>
+    <span class="grp">
+      <span class="glabel">population</span>
+      <label>dots <input id="n" type="range" min="40" max="500" value="200"><span id="nv">200</span></label>
+    </span>
+    <span class="grp">
+      <span class="glabel">influence</span>
+      <label>trust <input id="tr" type="range" min="0" max="20" value="5"><span id="trv">0.05</span></label>
+      <label>distrust <input id="dt" type="range" min="0" max="20" value="2"><span id="dtv">0.02</span></label>
+      <label>radius <input id="rad" type="range" min="0" max="150" value="60"><span id="radv">60</span></label>
+    </span>
+    <span class="grp">
+      <span class="glabel">look</span>
+      <label><input id="links" type="checkbox" checked> trust links</label>
+    </span>
+    <span class="grp">
+      <span class="glabel">run</span>
+      <button id="reset">reset</button>
+    </span>
   </div>
   <div id="credit">rules: dots wander; each picks one trusted + one distrusted dot and each step
     pulls its opinion-hue toward the trusted, away from the distrusted, and gently toward nearby dots ·

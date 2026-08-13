@@ -14,6 +14,20 @@
   #controls { display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
     font-size: 13px; }
   label { display: flex; gap: 6px; align-items: center; }
+  /* header: what this is, in one breath */
+  #head { width: 700px; max-width: 100%; margin: 2px 0 2px; }
+  #head h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.02em;
+    margin: 0; color: #e6e6f0; }
+  #tag { font-size: 12px; color: #8f8fa8; margin: 3px 0 0; }
+  #try { font-size: 11.5px; color: #b0b0c2; margin: 9px 0 0; line-height: 1.6;
+    border-left: 2px solid #3d3d5c; background: rgba(255,255,255,0.035);
+    padding: 5px 10px; border-radius: 0 5px 5px 0; }
+  #try .lead { color: #6f6f8c; text-transform: uppercase; letter-spacing: 0.09em;
+    font-size: 10px; margin-right: 4px; }
+  /* faint group labels so the control strip reads in chunks */
+  .glabel { font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase;
+    color: #5c5c78; }
+  .grp { display: inline-flex; gap: 8px; align-items: center; }
   input[type=range] { width: 110px; }
   button { background: #222233; color: #ddd; border: 1px solid #444;
     border-radius: 6px; padding: 4px 12px; font: inherit; cursor: pointer; }
@@ -24,12 +38,29 @@
 </head>
 <body>
 <div id="wrap">
+  <header id="head">
+    <h1>Rock-paper-scissors ecology</h1>
+    <p id="tag">three tribes chase their prey and flee their predator around a closed loop &mdash;
+      rock beats scissors beats paper beats rock, no top of the food chain.</p>
+    <p id="try"><span class="lead">try</span> watch the tribe-count bar in the corner rise and fall as
+      each colour takes its turn on top &mdash; keep it running and spiral waves of colour start chasing
+      each other across the field.</p>
+  </header>
   <canvas id="c" width="700" height="700"></canvas>
   <div id="controls">
-    <label>dots <input id="n" type="range" min="60" max="600" value="240"><span id="nv">240</span></label>
-    <label>dot speed <input id="sp" type="range" min="5" max="40" value="20"><span id="spv">2.0</span></label>
-    <label>radius <input id="cr" type="range" min="4" max="20" value="8"><span id="crv">8</span></label>
-    <button id="reset">reset</button>
+    <span class="grp">
+      <span class="glabel">population</span>
+      <label>dots <input id="n" type="range" min="60" max="600" value="240"><span id="nv">240</span></label>
+    </span>
+    <span class="grp">
+      <span class="glabel">tune</span>
+      <label>dot speed <input id="sp" type="range" min="5" max="40" value="20"><span id="spv">2.0</span></label>
+      <label>radius <input id="cr" type="range" min="4" max="20" value="8"><span id="crv">8</span></label>
+    </span>
+    <span class="grp">
+      <span class="glabel">run</span>
+      <button id="reset">reset</button>
+    </span>
   </div>
   <div id="credit">cycle: <span class="rock">rock (red)</span> beats
     <span class="scis">scissors (green)</span> beats
