@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tiny Worlds</title>
+<style>
+  html, body { margin: 0; min-height: 100%; background: #0b0b10; color: #ddd;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  #wrap { display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 16px; box-sizing: border-box; }
+  canvas { background: #000; border-radius: 8px; max-width: 100%; display: block; }
+  #controls, #controls2 { display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    justify-content: center; font-size: 12.5px; max-width: 720px; }
+  #controls2 { font-size: 11.5px; color: #8f8fa8; }
+  label { display: flex; gap: 6px; align-items: center; }
+  /* header: what this is, in one breath */
+  #head { width: 700px; max-width: 100%; margin: 2px 0 2px; }
+  #head h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.02em;
+    margin: 0; color: #e6e6f0; }
+  #tag { font-size: 12px; color: #8f8fa8; margin: 3px 0 0; }
+  #try { font-size: 11.5px; color: #b0b0c2; margin: 9px 0 0; line-height: 1.6;
+    border-left: 2px solid #3d3d5c; background: rgba(255,255,255,0.035);
+    padding: 5px 10px; border-radius: 0 5px 5px 0; }
+  #try .lead { color: #6f6f8c; text-transform: uppercase; letter-spacing: 0.09em;
+    font-size: 10px; margin-right: 4px; }
+  #try .k-mut { color: #ffc440; font-weight: 600; }
+  #try .k-slow { color: #7fd6b5; font-weight: 600; }
+  /* faint group labels so the control strip reads in chunks */
+  .glabel { font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase;
+    color: #5c5c78; }
+  .grp { display: inline-flex; gap: 8px; align-items: center; }
+  input[type=range] { width: 110px; }
+  #controls input[type=range] { width: 70px; }
+  #controls2 input[type=range] { width: 70px; }
+  button { background: #222233; color: #ddd; border: 1px solid #444;
+    border-radius: 6px; padding: 4px 12px; font: inherit; cursor: pointer; }
+  #controls button { padding: 4px 9px; }
+  #worlds { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+  button.world.active { background: #35355a; border-color: #8ab4f8; color: #fff; }
+  button#mutate { background: #3a2a12; border-color: #7a5c22; color: #ffc440; }
+  button#mutate:hover { background: #4a3618; }
+  /* the formula, which is the whole point: show the world's source */
+  #formula { width: 700px; max-width: 100%; box-sizing: border-box;
+    background: #101018; border: 1px solid #23233a; border-radius: 8px;
+    padding: 9px 11px; }
+  #fcode { font-size: 10.5px; line-height: 1.55; color: #9fd0c0;
+    word-break: break-all; white-space: pre-wrap; margin: 0; }
+  #fcount { font-size: 10.5px; color: #6f6f8c; margin: 6px 0 0;
+    display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  #fcount b { color: #ffc440; font-weight: 600; }
+  #fcount .hint { color: #4e4e66; }
+  #fname { color: #8ab4f8; }
+  #credit { font-size: 11px; color: #777; max-width: 660px; text-align: center;
+    line-height: 1.6; }
+  a { color: #8ab4f8; }
+  #essay { max-width: 640px; font-size: 12.5px; line-height: 1.7; color: #a8a8b8;
+    margin-bottom: 24px; }
+  #essay summary { cursor: pointer; color: #777; font-size: 11px; text-align: center; }
+  #essay p { margin: 12px 0; }
+  #essay strong { color: #d8d8e4; }
+  #essay code { color: #9fd0c0; font-size: 11.5px; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header id="head">
+    <h1>Tiny Worlds</h1>
+    <p id="tag">an entire landscape &mdash; canyons, nebulae, coral &mdash; unpacked from a formula
+      about the length of a tweet.</p>
+    <p id="try"><span class="lead">try</span> pick a world &rarr; hit
+      <span class="k-mut">mutate</span> until you find one nobody has ever seen &rarr; then
+      <span class="k-slow">slow it down</span> with the speed slider and watch the light move
+      through it.</p>
+  </header>
+  <canvas id="c" width="700" height="700"></canvas>
+  <div id="controls">
+    <span class="grp">
+      <span class="glabel">worlds</span>
+      <span id="worlds"></span>
+      <button id="mutate">mutate</button>
+    </span>
+  </div>
+  <div id="controls2">
+    <span class="grp">
+      <span class="glabel">look</span>
+      <label>hue <input id="s-hue" type="range" min="0" max="1" step="0.005" value="0.1"><span id="v-hue">.10</span></label>
+      <label>glow <input id="s-glow" type="range" min="-3" max="-1" step="0.01" value="-2.4"><span id="v-glow">.004</span></label>
+    </span>
+    <span class="grp">
+      <span class="glabel">tune</span>
+      <label>inversion k <input id="s-k" type="range" min="2" max="14" step="0.05" value="7.2"><span id="v-k">7.20</span></label>
+      <label>zoom <input id="s-zoom" type="range" min="2" max="24" step="0.1" value="8"><span id="v-zoom">8.0</span></label>
+      <label>folds <input id="s-folds" type="range" min="6" max="28" step="1" value="19"><span id="v-folds">19</span></label>
+    </span>
+  </div>
+  <div id="formula">
+    <p id="fcode"></p>
+    <p id="fcount"><span>this world is <b id="fn">0</b> characters of math
+      <span class="hint">&mdash; a tweet is 280</span></span>
+      <span id="fname"></span></p>
+  </div>
+  <div id="credit">99 ray steps, a dozen-odd folds at each one: <em>abs()</em> mirrors space,
+    sphere inversion curls it, and the leftover scale is read as light &middot; the recipe is
+    <a href="https://x.com/YoheiNishitsuji">Yohei Nishitsuji</a>&rsquo;s
+    <a href="https://tympanus.net/codrops/2025/06/23/modeling-the-world-in-280-characters/">#つぶやきGLSL</a>
+    &middot; <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
+  <details id="essay">
+    <summary>why this is interesting &mdash; philosophy &middot; technique &middot; aesthetics</summary>
+    <p><strong>Philosophy &mdash; the world was already there.</strong> Nothing on this canvas was
+      designed. Nobody modelled a canyon, placed a rock, or painted a nebula. There are about
+      twenty numbers, and everything you see is the consequence of them &mdash; a complete
+      landscape, with weather and distance and erosion, specified in about as many characters as
+      a tweet. That is a strange kind of authorship. The formula does not <em>contain</em> the
+      canyon the way a mesh contains a canyon; it <em>points at</em> one, the way &ldquo;the
+      millionth prime&rdquo; points at 15,485,863 without storing it. All these worlds were
+      sitting in the space of parameters before anyone wrote the shader, and mutate is not a
+      generator so much as a telescope: it swings the aim a few degrees and something nobody has
+      ever looked at comes into frame. Almost everything out there is fog or an empty void &mdash;
+      the habitable worlds are a thin shell in parameter space &mdash; so the button does not
+      simply roll dice. It rolls a dozen, renders each candidate to a 96-pixel thumbnail, scores
+      it for brightness, structure and grain, and shows you the survivor. Taste, mechanised badly
+      enough to be honest about it.
+      Compression this extreme stops being an engineering trick and becomes a claim about the
+      world: that enormous apparent complexity can be the shadow of a very short rule, and that
+      our sense of &ldquo;how much stuff is here&rdquo; is a poor guide to how much information is
+      here.</p>
+    <p><strong>Technique &mdash; march, fold, invert.</strong> Every pixel fires a ray and walks it
+      forward in 99 steps. At each step the point runs an inner loop that does two things, nineteen
+      times. First <em>sphere inversion</em>: <code>e = k/dot(p,p)</code> turns distance inside
+      out, so the region near the origin blows up to fill everything and the far field collapses
+      to a point &mdash; this is what manufactures detail at every scale for free. Then
+      <em>folding</em>: <code>p = offset - abs(abs(p)*e - fold)</code>. An <code>abs()</code> is a
+      mirror. Two nested <code>abs()</code> calls with an offset between them mirror space, shift
+      it, and mirror it again &mdash; and because that happens inside a loop, the mirrors stack
+      into an infinite hall of them. Nineteen folds is 2<sup>19</sup> reflected copies of one small
+      cell of space, which is why a formula with no repetition in it produces structure that
+      repeats and yet never quite matches. The running product of those inversion factors,
+      <code>s</code>, is the local magnification; the ray advances by <code>p.y/s</code>, so it
+      creeps where the fractal is dense and leaps where it is empty. That single line is the
+      distance estimator, and it is why 99 steps is enough to cross a whole world.</p>
+    <p><strong>Aesthetics &mdash; glow instead of surfaces.</strong> A conventional renderer stops
+      the ray when it hits something and asks what colour the surface is. Nothing here ever stops.
+      The colour is a sum along the entire path &mdash; every step deposits a little
+      <code>hsv()</code> whose saturation comes from depth and whose brightness comes from
+      <code>log(s)/exp(e)</code>, the local magnification read as light. So the image is
+      volumetric by construction: haze, godrays and depth fall out of the accumulation rather
+      than being added on top, and there are no edges anywhere, only densities. It also means the
+      picture is unusually forgiving &mdash; a hard surface renderer punishes a bad distance
+      estimate with holes and banding, while a glow integrator just turns the error into
+      atmosphere. Flip a world to its inverted polarity and the same maths reads as ink on paper
+      instead of light in a void: identical geometry, opposite ontology. The recipe is Yohei
+      Nishitsuji&rsquo;s, from his <a
+      href="https://tympanus.net/codrops/2025/06/23/modeling-the-world-in-280-characters/">Modeling
+      the World in 280 Characters</a> and his stream of
+      <a href="https://x.com/YoheiNishitsuji">#つぶやきGLSL</a> posts; this page unfolds it back
+      into readable GLSL and puts knobs on it, which is the opposite of the discipline that
+      produced it and, hopefully, a decent way to learn what the knobs do.</p>
+  </details>
+</div>
+
+<script id="vert" type="x-shader/x-vertex">
+attribute vec2 a_pos;
+void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
+</script>
+
+<script id="frag" type="x-shader/x-fragment">
+precision highp float;
+
+uniform vec2  u_res;      // canvas size in pixels
+uniform float u_time;     // seconds (driven by the fixed-step accumulator)
+
+uniform vec3  u_fold;     // the vector subtracted inside the second abs()
+uniform vec3  u_offset;   // the pre-fold offset the folded point is subtracted from
+uniform float u_k;        // sphere-inversion strength
+uniform float u_hue;      // base hue
+uniform float u_hueVar;   // hue drift per unit of ray depth
+uniform float u_satG;     // saturation gained with depth
+uniform float u_satE;     // saturation lost to the local inversion factor
+uniform float u_glow;     // glow gain (brightness per unit of local magnification)
+uniform float u_zoom;     // camera zoom (world units across the short axis)
+uniform float u_drift;    // camera drift speed
+uniform float u_swing;    // camera drift amplitude, in radians
+uniform vec2  u_pan;      // camera offset within the fractal
+uniform float u_tilt;     // base camera angle
+uniform vec3  u_axis;     // camera rotation axis
+uniform float u_base;     // additive pedestal (only used when inverted)
+uniform float u_invert;   // 0 = glow in a void, 1 = ink on light
+uniform int   u_folds;    // inner fold iterations
+
+const int MAX_FOLDS = 28;
+const int STEPS = 99;
+
+// hue/saturation/value -> rgb (the one the GLSL-golf community carries around)
+vec3 hsv(float h, float s, float v) {
+  vec3 k = clamp(abs(fract(h + vec3(0.0, 2.0 / 3.0, 1.0 / 3.0)) * 6.0 - 3.0) - 1.0, 0.0, 1.0);
+  return v * mix(vec3(1.0), k, s);
+}
+
+// rotation matrix about an arbitrary axis (Rodrigues, written out)
+mat3 rotate3D(float angle, vec3 axis) {
+  vec3 a = normalize(axis);
+  float s = sin(angle), c = cos(angle), r = 1.0 - c;
+  return mat3(
+    a.x * a.x * r + c,       a.y * a.x * r + a.z * s, a.z * a.x * r - a.y * s,
+    a.x * a.y * r - a.z * s, a.y * a.y * r + c,       a.z * a.y * r + a.x * s,
+    a.x * a.z * r + a.y * s, a.y * a.z * r - a.x * s, a.z * a.z * r + c
+  );
+}
+
+void main() {
+  // the camera is an orthographic slab that marches along its own z; the whole
+  // sense of perspective comes from the fractal's self-similarity, not from a
+  // projection matrix
+  mat3 cam = rotate3D(u_tilt - sin(u_time * u_drift) * u_swing, u_axis);
+  vec2 uv = (gl_FragCoord.xy - 0.5 * u_res) / u_res.y * u_zoom + u_pan;
+
+  vec3 color = vec3(0.0);
+  float g = 0.0;   // distance travelled along the ray
+  float e = 0.0;   // last inversion factor
+  float s = 0.0;   // running magnification
+
+  for (int i = 0; i < STEPS; i++) {
+    vec3 p = vec3(uv, g) * cam;
+
+    // fold + invert: this is the entire "geometry" of the world
+    s = 2.0;
+    for (int j = 0; j < MAX_FOLDS; j++) {
+      if (j >= u_folds) break;
+      e = u_k / dot(p, p * 0.5);        // sphere inversion
+      s *= e;                            // accumulate local magnification
+      p = u_offset - abs(abs(p) * e - u_fold);   // mirror, shift, mirror
+    }
+
+    // distance estimate: creep where the fractal is dense, leap where it is empty
+    g += p.y / s;
+    s = log(s) / exp(e);
+
+    // deposit a little light for this step — no surface is ever hit
+    vec3 c = hsv(u_hue + u_hueVar * g, g * u_satG - e * u_satE, s * u_glow);
+    color += mix(c, vec3(u_base) - c, u_invert);
+  }
+
+  gl_FragColor = vec4(color, 1.0);
+}
+</script>
+
+<script src="../lib/gifenc.js"></script>
+<script src="../lib/controls.js"></script>
+<script>
+'use strict';
+const cv = document.getElementById('c');
+// preserveDrawingBuffer: the shared gif recorder reads the canvas with
+// drawImage() outside the render callback, which reads a cleared buffer on a
+// normal WebGL context
+const gl = cv.getContext('webgl', { preserveDrawingBuffer: true, antialias: false, alpha: false });
+
+// ---------------------------------------------------------------- shader ---
+function compile(type, src) {
+  const sh = gl.createShader(type);
+  gl.shaderSource(sh, src);
+  gl.compileShader(sh);
+  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+    console.error('shader compile failed:', gl.getShaderInfoLog(sh));
+  }
+  return sh;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, compile(gl.VERTEX_SHADER, document.getElementById('vert').textContent));
+gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, document.getElementById('frag').textContent));
+gl.linkProgram(prog);
+if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+  console.error('program link failed:', gl.getProgramInfoLog(prog));
+}
+gl.useProgram(prog);
+
+const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+const loc = gl.getAttribLocation(prog, 'a_pos');
+gl.enableVertexAttribArray(loc);
+gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+const U = {};
+for (const n of ['u_res', 'u_time', 'u_fold', 'u_offset', 'u_k', 'u_hue', 'u_hueVar',
+                 'u_satG', 'u_satE', 'u_glow', 'u_zoom', 'u_drift', 'u_swing', 'u_pan',
+                 'u_tilt', 'u_axis', 'u_base', 'u_invert', 'u_folds']) {
+  U[n] = gl.getUniformLocation(prog, n);
+}
+
+// ---------------------------------------------------------------- worlds ---
+// Each world is the same 280 characters with different numbers in it. The
+// parameters that matter most are fold/offset/k — they decide what the folded
+// space *is*; hue/glow/zoom only decide how it is photographed.
+// Every number here was found by search, not by design: a few thousand random
+// parameter sets rendered small and scored for brightness, structure and
+// noise, then the survivors looked at by eye. Rounded to three figures so the
+// formula printed under the canvas is exactly the one being rendered.
+const WORLDS = {
+  // the reference recipe, near enough: Nishitsuji's own constants
+  canyon: {
+    fold: [3, 4, 3], offset: [0.1, 4, -1], k: 7.2, folds: 19,
+    hue: 0.1, hueVar: 0, satG: 0.02, satE: 0.2, glow: 0.004,
+    zoom: 8, pan: [2, 6], tilt: 1.9, axis: [0, 9, -1.3], drift: 0.5, swing: 0.03,
+    base: 0.01, invert: 1,
+  },
+  strata: {
+    fold: [3.16, 3.93, 1.9], offset: [2.92, 1.22, -1.14], k: 6.38, folds: 11,
+    hue: 0.732, hueVar: 0.02, satG: 0.052, satE: 0.395, glow: 0.01,
+    zoom: 5.13, pan: [0.648, 4.28], tilt: 0.484, axis: [0.212, 8, -1.57],
+    drift: 0.44, swing: 0.042, base: 0.01, invert: 1,
+  },
+  nebula: {
+    fold: [1.75, 3.49, 4.61], offset: [-1.5, 2.88, 1.76], k: 8.03, folds: 15,
+    hue: 0.323, hueVar: -0.0375, satG: 0.053, satE: 0.674, glow: 0.01,
+    zoom: 8.42, pan: [-1, 6.56], tilt: 1.53, axis: [-0.451, 8, -1.94],
+    drift: 0.5, swing: 0.04, base: 0.01, invert: 0,
+  },
+  reef: {
+    fold: [5.02, 3.32, 3.53], offset: [-1.78, 2.95, -0.115], k: 8.78, folds: 18,
+    hue: 0.875, hueVar: 0.0187, satG: 0.056, satE: 0.604, glow: 0.0025,
+    zoom: 10.5, pan: [1.1, 6.16], tilt: 1.85, axis: [0.707, 8, -1.79],
+    drift: 0.6, swing: 0.038, base: 0.01, invert: 0,
+  },
+  temple: {
+    fold: [2.97, 2.22, 3], offset: [-0.724, 2.07, -1.89], k: 10.6, folds: 14,
+    hue: 0.563, hueVar: 0.00914, satG: 0.031, satE: 0.513, glow: 0.0034,
+    zoom: 6.72, pan: [3.19, 5.97], tilt: 2.45, axis: [0.369, 8, 0.343],
+    drift: 0.36, swing: 0.045, base: 0.01, invert: 0,
+  },
+};
+
+let P = null, current = 'canyon';
+
+function apply(p, name) {
+  P = JSON.parse(JSON.stringify(p));
+  current = name || 'mutation';
+  syncUI();
+  writeFormula();
+  markActive();
+}
+
+function push() {
+  gl.uniform2f(U.u_res, cv.width, cv.height);
+  gl.uniform3fv(U.u_fold, P.fold);
+  gl.uniform3fv(U.u_offset, P.offset);
+  gl.uniform1f(U.u_k, P.k);
+  gl.uniform1f(U.u_hue, P.hue);
+  gl.uniform1f(U.u_hueVar, P.hueVar);
+  gl.uniform1f(U.u_satG, P.satG);
+  gl.uniform1f(U.u_satE, P.satE);
+  gl.uniform1f(U.u_glow, P.glow);
+  gl.uniform1f(U.u_zoom, P.zoom);
+  gl.uniform1f(U.u_drift, P.drift);
+  gl.uniform1f(U.u_swing, P.swing);
+  gl.uniform2fv(U.u_pan, P.pan);
+  gl.uniform1f(U.u_tilt, P.tilt);
+  gl.uniform3fv(U.u_axis, P.axis);
+  gl.uniform1f(U.u_base, P.base);
+  gl.uniform1f(U.u_invert, P.invert);
+  gl.uniform1i(U.u_folds, P.folds);
+}
+
+// ------------------------------------------------------------ the formula ---
+// Rebuild the golfed one-liner with the current numbers substituted, so the
+// text under the canvas is genuinely the source of the picture above it.
+function g(v) {
+  if (Math.abs(v) < 1e-6) return '0';
+  let s = String(+(+v).toPrecision(3));
+  return s.replace(/^(-?)0\./, '$1.');
+}
+function v3(a) { return `vec3(${g(a[0])},${g(a[1])},${g(a[2])})`; }
+
+function golfed() {
+  const hue = P.hueVar ? `${g(P.hue)}+g*${g(P.hueVar)}` : g(P.hue);
+  const val = P.glow < 0.01 ? `s/${g(1 / P.glow)}` : `s*${g(P.glow)}`;
+  const sat = `g*${g(P.satG)}-e*${g(P.satE)}`;
+  const col = P.invert >= 0.5
+    ? `${g(P.base)}-hsv(${hue},${sat},${val})`
+    : `hsv(${hue},${sat},${val})`;
+  return `for(float i,g,e,s;++i<99.;o.rgb+=${col}){vec3 p=vec3((FC.xy-.5*r)/r.y*` +
+    `${g(P.zoom)}+vec2(${g(P.pan[0])},${g(P.pan[1])}),g)*rotate3D(${g(P.tilt)}-sin(t*` +
+    `${g(P.drift)})*${g(P.swing)},${v3(P.axis)});s=2.;for(int i;i++<${P.folds};p=` +
+    `${v3(P.offset)}-abs(abs(p)*e-${v3(P.fold)}))s*=e=${g(P.k)}/dot(p,p*.5);g+=p.y/s;` +
+    `s=log(s)/exp(e);}`;
+}
+
+function writeFormula() {
+  const txt = golfed();
+  document.getElementById('fcode').textContent = txt;
+  document.getElementById('fn').textContent = txt.length;
+  document.getElementById('fname').textContent = current;
+}
+
+// ---------------------------------------------------------------- mutate ---
+// Rolling the dice once almost always lands on fog or an empty void: the
+// interesting worlds are a thin shell in parameter space. So mutate rolls a
+// dozen, renders each one to a 96×96 thumbnail, scores it, and shows you the
+// best — the same rejection sampling that found the presets above, run live.
+const rnd = (a, b) => a + Math.random() * (b - a);
+
+// candidate geometry: fold vectors a few units across, offsets that keep the
+// fold cell off the origin, and an inversion strength that neither collapses
+// the fractal to a point nor blows it past the ray
+function randomWorld() {
+  return {
+    fold: [rnd(1.5, 5.0), rnd(1.5, 5.0), rnd(1.5, 5.0)],
+    offset: [rnd(-1.8, 2.6), rnd(1.2, 5.4), rnd(-2.4, 1.8)],
+    k: rnd(4.4, 10.5),
+    folds: Math.round(rnd(11, 22)),
+    hue: Math.random(),
+    hueVar: rnd(-0.045, 0.045),
+    satG: rnd(0.01, 0.06),
+    satE: rnd(0.1, 0.7),
+    glow: 0.005,
+    zoom: rnd(4.5, 13),
+    pan: [rnd(-2, 3.5), rnd(1.5, 6.5)],
+    tilt: rnd(0.5, 2.7),
+    axis: [rnd(-1.2, 1.2), 8, rnd(-2, 2)],
+    drift: rnd(0.3, 0.65),
+    swing: rnd(0.025, 0.05),
+    base: 0.01,
+    invert: Math.random() < 0.5 ? 1 : 0,
+  };
+}
+
+// Render the current parameters into the bottom-left 96×96 of the back buffer
+// and read it back. This never reaches the screen: the full-size draw() that
+// follows overwrites the buffer before the browser composites the frame.
+const PW = 96;
+const PBUF = new Uint8Array(PW * PW * 4), PLUM = new Float32Array(PW * PW);
+
+function probe() {
+  gl.viewport(0, 0, PW, PW);
+  push();
+  gl.uniform2f(U.u_res, PW, PW);
+  gl.uniform1f(U.u_time, 3.0);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  gl.readPixels(0, 0, PW, PW, gl.RGBA, gl.UNSIGNED_BYTE, PBUF);
+
+  const n = PW * PW;
+  let sum = 0, flat = 0, sat = 0;
+  for (let i = 0, j = 0; i < n; i++, j += 4) {
+    const r = PBUF[j] / 255, gr = PBUF[j + 1] / 255, bl = PBUF[j + 2] / 255;
+    const l = 0.299 * r + 0.587 * gr + 0.114 * bl;
+    PLUM[i] = l; sum += l;
+    if (l < 0.015 || l > 0.985) flat++;                 // crushed or blown out
+    sat += Math.max(r, gr, bl) - Math.min(r, gr, bl);
+  }
+  const mean = sum / n;
+  let vr = 0;
+  for (let i = 0; i < n; i++) { const d = PLUM[i] - mean; vr += d * d; }
+  // spread of 12×12 block means: is there structure at the scale of shapes,
+  // as opposed to overall contrast (std) or pixel fizz (hf)?
+  const B = 8, bw = PW / B, bm = [];
+  for (let by = 0; by < B; by++) for (let bx = 0; bx < B; bx++) {
+    let s2 = 0;
+    for (let y = 0; y < bw; y++) for (let x = 0; x < bw; x++) s2 += PLUM[(by * bw + y) * PW + bx * bw + x];
+    bm.push(s2 / (bw * bw));
+  }
+  const bmean = bm.reduce((a, c) => a + c, 0) / bm.length;
+  let bv = 0;
+  for (const v of bm) bv += (v - bmean) * (v - bmean);
+  let hf = 0;
+  for (let y = 0; y < PW; y++) for (let x = 0; x < PW - 1; x++) hf += Math.abs(PLUM[y * PW + x + 1] - PLUM[y * PW + x]);
+  return { mean, std: Math.sqrt(vr / n), bstd: Math.sqrt(bv / bm.length),
+           hf: hf / (PW * (PW - 1)), flat: flat / n, sat: sat / n };
+}
+
+// every term is a 0–1 factor, so a world has to pass all of them at once
+function worldScore(s, target) {
+  if (!isFinite(s.mean)) return 0;
+  const bright = 1 - Math.min(1, Math.abs(s.mean - target) / target);
+  const structure = Math.min(1, s.bstd / 0.13);
+  const contrast = Math.min(1, s.std / 0.26);
+  const quiet = Math.max(0, 1 - Math.max(0, s.hf - 0.06) / 0.09);
+  const solid = Math.max(0, 1 - Math.max(0, s.flat - 0.10) / 0.45);
+  const colour = 0.35 + 0.65 * Math.min(1, s.sat / 0.2);
+  return bright * structure * contrast * quiet * solid * colour;
+}
+
+// exposure is searched separately from geometry: the same fold can be a black
+// void or a white-out depending only on glow
+const GLOW_LADDER = [0.0012, 0.0025, 0.005, 0.01, 0.02, 0.04];
+
+function mutate() {
+  const keep = P;
+  let best = null;
+  for (let tries = 0; tries < 12; tries++) {
+    const geo = randomWorld();
+    const target = geo.invert ? 0.55 : 0.28;   // ink on light vs glow in a void
+    for (const gv of GLOW_LADDER) {
+      P = Object.assign({}, geo, { glow: gv });
+      const sc = worldScore(probe(), target);
+      if (!best || sc > best.sc) best = { sc: sc, p: P };
+    }
+    if (best.sc > 0.42) break;                 // good enough; stop looking
+  }
+  P = keep;
+  apply(best.p, 'mutation');
+  draw();
+}
+
+// -------------------------------------------------------------------- UI ---
+const $ = id => document.getElementById(id);
+
+function markActive() {
+  for (const b of document.querySelectorAll('button.world')) {
+    b.classList.toggle('active', b.dataset.w === current);
+  }
+}
+
+const worldsEl = $('worlds');
+for (const name of Object.keys(WORLDS)) {
+  const b = document.createElement('button');
+  b.className = 'world';
+  b.dataset.w = name;
+  b.textContent = name;
+  b.onclick = () => apply(WORLDS[name], name);
+  worldsEl.appendChild(b);
+}
+$('mutate').onclick = mutate;
+
+function syncUI() {
+  $('s-hue').value = P.hue;         $('v-hue').textContent = P.hue.toFixed(2).replace(/^0/, '');
+  $('s-glow').value = Math.log10(P.glow); $('v-glow').textContent = g(P.glow);
+  $('s-k').value = P.k;             $('v-k').textContent = P.k.toFixed(2);
+  $('s-zoom').value = P.zoom;       $('v-zoom').textContent = P.zoom.toFixed(1);
+  $('s-folds').value = P.folds;     $('v-folds').textContent = P.folds;
+}
+
+function tweak(fn) {
+  return e => {
+    fn(+e.target.value);
+    // mark that we have drifted off the named preset (once, not once per drag)
+    if (current !== 'mutation' && !/ \*$/.test(current)) current += ' *';
+    syncUI(); writeFormula(); markActive();
+  };
+}
+$('s-hue').oninput = tweak(v => { P.hue = v; });
+$('s-glow').oninput = tweak(v => { P.glow = Math.pow(10, v); });
+$('s-k').oninput = tweak(v => { P.k = v; });
+$('s-zoom').oninput = tweak(v => { P.zoom = v; });
+$('s-folds').oninput = tweak(v => { P.folds = Math.round(v); });
+
+// ------------------------------------------------------- loop + recording ---
+// The sketch is time-driven rather than state-driven, so a "tick" is just a
+// fixed slice of time; the speed slider therefore controls the shutter.
+let t = 0;
+const DT = 1 / 60;
+function step() { t += DT; }
+function draw() {
+  gl.viewport(0, 0, cv.width, cv.height);
+  push();
+  gl.uniform1f(U.u_time, t);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+apply(WORLDS.canyon, 'canyon');
+draw();
+SketchControls.attach({ canvas: cv, step, draw, ticksPerSecond: 60 });
+
+// test hook: lets a headless browser drive presets/params without clicking
+window.TW = {
+  apply, mutate, draw, golfed, worlds: WORLDS,
+  params: () => P,
+  setTime: v => { t = v; },
+};
+</script>
+</body>
+</html>
