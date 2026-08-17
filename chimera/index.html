@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chimera</title>
+<style>
+  html, body { margin: 0; min-height: 100%; background: #07090c; color: #d6d9e2;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  #wrap { display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 16px; box-sizing: border-box; }
+  canvas { background: #07090c; border-radius: 10px; max-width: 100%; cursor: crosshair; }
+  #controls, #controls2 { display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    justify-content: center; font-size: 12.5px; max-width: 730px; }
+  #controls2 { font-size: 11.5px; color: #7d8296; }
+  label { display: flex; gap: 6px; align-items: center; }
+  /* header: what this is, in one breath */
+  #head { width: 700px; max-width: 100%; margin: 2px 0 2px; }
+  #head h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.02em;
+    margin: 0; color: #e7e2d6; }
+  #tag { font-size: 12px; color: #8b8fa3; margin: 3px 0 0; line-height: 1.55; }
+  #try { font-size: 11.5px; color: #adb2c4; margin: 9px 0 0; line-height: 1.6;
+    border-left: 2px solid #3a3f66; background: rgba(150,170,255,0.045);
+    padding: 5px 10px; border-radius: 0 5px 5px 0; }
+  #try .lead { color: #6b7093; text-transform: uppercase; letter-spacing: 0.09em;
+    font-size: 10px; margin-right: 4px; }
+  #try .k-drag { color: #f0bd72; font-weight: 600; }
+  #try .k-hes { color: #8fa6e8; font-weight: 600; }
+  /* faint group labels so the control strip reads in three chunks */
+  .glabel { font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase;
+    color: #575c78; }
+  .grp { display: inline-flex; gap: 8px; align-items: center; }
+  input[type=range] { width: 96px; accent-color: #c9954c; }
+  button { background: #171b26; color: #d6d9e2; border: 1px solid #333a4d;
+    border-radius: 6px; padding: 4px 11px; font: inherit; cursor: pointer; }
+  button:hover { background: #212736; }
+  select { background: #171b26; color: #d6d9e2; border: 1px solid #333a4d;
+    border-radius: 6px; padding: 3px 6px; font: inherit; }
+  #credit { font-size: 11px; color: #6f7488; max-width: 660px; text-align: center;
+    line-height: 1.65; }
+  a { color: #8fa6e8; }
+  #essay { max-width: 640px; font-size: 12.5px; line-height: 1.7; color: #9ba0b3;
+    margin-bottom: 26px; }
+  #essay summary { cursor: pointer; color: #6f7488; font-size: 11px; text-align: center; }
+  #essay p { margin: 12px 0; }
+  #essay strong { color: #d8dae4; }
+  #essay em { color: #c2b394; font-style: normal; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header id="head">
+    <h1>Chimera</h1>
+    <p id="tag">seven hundred identical oscillators on a ring, every one obeying the same rule &mdash;
+      and the ring divides itself into a locked arc and a wandering one.</p>
+    <p id="try"><span class="lead">try this first</span> just watch for ten seconds &mdash; part of the
+      band flows as one smooth wave, part of it seethes out of step, and nothing tells them apart.
+      Then <span class="k-drag">drag across the ring</span> to stir it: the split re-forms, somewhere
+      else. Pull <span class="k-hes">hesitation</span> down and the whole body freezes into one voice.</p>
+  </header>
+  <canvas id="c" width="700" height="700"></canvas>
+  <div id="controls">
+    <span class="grp">
+      <span class="glabel">look</span>
+      <select id="view" title="which of the two readings leads the composition">
+        <option value="woven">woven</option>
+        <option value="loom">loom</option>
+      </select>
+      <select id="pal" title="colour ramp for phase">
+        <option value="dusk">dusk</option>
+        <option value="ember">ember</option>
+        <option value="frost">frost</option>
+      </select>
+    </span>
+    <span class="grp">
+      <span class="glabel">run</span>
+      <button id="stir" title="scramble a random arc of the ring">stir</button>
+      <button id="reset" title="fresh ring, fresh seed">reset</button>
+    </span>
+  </div>
+  <div id="controls2">
+    <span class="glabel">tune</span>
+    <label title="phase lag α — how late each oscillator answers what it hears. Below about 1.35 the ring locks solid and the chimera is gone; push it up and the locked arc thins until almost nothing holds together.">hesitation
+      <input id="al" type="range" min="1.10" max="1.60" step="0.005" value="1.39"><span id="alv">1.390</span></label>
+    <label title="kernel shape A — 0 means every oscillator counts equally, 1 means nearby ones count most. The chimera needs nonlocal coupling: it dies below about 0.8.">locality
+      <input id="ak" type="range" min="0" max="1" step="0.005" value="0.995"><span id="akv">0.995</span></label>
+  </div>
+  <div id="credit">each oscillator&rsquo;s only instruction is
+    <code>d&theta;<sub>i</sub>/dt&nbsp;=&nbsp;&minus;&langle;G(x<sub>i</sub>&minus;x<sub>j</sub>)&nbsp;sin(&theta;<sub>i</sub>&minus;&theta;<sub>j</sub>+&alpha;)&rangle;</code>
+    &mdash; pull toward everyone else, weighted by how near they sit on the ring, answered a beat late.
+    The population is perfectly uniform and the rule perfectly symmetric, and it still splits ·
+    discovered by <a href="https://www.j-npcs.org/abstracts/vol2002/v5no4/v5no4p380.html">Kuramoto &amp;
+    Battogtokh (2002)</a>, named <em>chimera</em> by
+    <a href="https://arxiv.org/abs/cond-mat/0407045">Abrams &amp; Strogatz (2004)</a> ·
+    <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
+  <details id="essay">
+    <summary>why this is interesting &mdash; philosophy &middot; technique &middot; aesthetics</summary>
+    <p><strong>Philosophy &mdash; one body, two selves.</strong> Everything on this ring is the same.
+      Same natural frequency, same coupling, same lag; no oscillator is special, no place on the ring
+      is special, and the equations do not know left from right. Symmetry that complete is normally an
+      argument that the answer must be uniform &mdash; whatever the ring does, it should do everywhere.
+      Instead the ring picks a spot, for no reason, and becomes two things at once: an arc that holds
+      together in one smooth breath, and an arc that will not stop wandering. Neither wins. The
+      boundary between them is real but nothing marks it, and if you stir the ring the split re-forms
+      somewhere else entirely, as arbitrary as before. It is a small, exact demonstration that a thing
+      can be divided into an ordered self and a drifting one without any part of it being different,
+      or damaged, or in charge. Order and drift are not two populations here. They are two things one
+      population is doing.</p>
+    <p><strong>Technique &mdash; the beat of hesitation.</strong> Two ingredients, and you need both.
+      The first is <em>nonlocal</em> coupling: each oscillator listens to the whole ring but weights
+      its neighbours more &mdash; here by the kernel <code>G(x) = (1 + A&thinsp;cos&thinsp;x)/2&pi;</code>,
+      which is why the <em>locality</em> slider kills the chimera below about 0.8, collapsing the ring
+      into ordinary all-to-all Kuramoto where only total sync or total noise are on offer. The second
+      is the phase lag <code>&alpha;</code>, labelled <em>hesitation</em>: each oscillator answers what
+      it hears a fraction of a cycle late. A lag just under a quarter turn is the knife edge where
+      pulling-into-step and pushing-out-of-step nearly cancel, and the ring can afford to do both at
+      once in different places. Drop the lag below about 1.35 and the argument is over &mdash; the
+      whole ring locks and stays locked. Push it toward a quarter turn and the locked arc thins away
+      instead, until almost nothing on the ring is holding together. Yoshiki Kuramoto and Dorjsuren Battogtokh found this in 2002 and it was
+      genuinely shocking &mdash; the received wisdom was that identical, symmetrically coupled
+      oscillators either synchronise or they don&rsquo;t. Daniel Abrams and Steven Strogatz named it in
+      2004, after the Greek monster stitched together from mismatched animals. The simulation here is
+      exact and cheap: because the kernel is a cosine, the sum over all 700&times;700 pairs collapses
+      into three global sums per step, so nothing is approximated away.</p>
+    <p><strong>Aesthetics &mdash; two readings of the same body.</strong> The obvious way to draw
+      phase is a rainbow, and it makes any oscillator model look like an instrument panel. This uses
+      a two-tone ramp instead &mdash; deep indigo through to warm gold &mdash; so the locked arc reads
+      as light moving across cloth rather than as data. Brightness and saturation are then driven by
+      <em>local</em> coherence, which is the actual claim being made: where the neighbours agree the
+      colour is full, and where they don&rsquo;t it breaks up into embers. There is a problem, though,
+      and it is worth naming: at any single instant a locked arc is just one flat colour. Nothing to
+      look at. So the piece draws the ring&rsquo;s recent history rather than its instant. In the
+      annulus, now is the outer edge and time falls inward, so every oscillator leaves a filament
+      behind it &mdash; twelve seconds of smooth concentric bands where the ring is locked, twelve
+      seconds of ember streaks where it is not. Switch to <em>loom</em> and the same data is unrolled
+      flat with seventy seconds falling down the frame: plain weave on one side of the seam, jacquard
+      on the other. Look for the thin bright lines that cut across the concentric bands. Those are
+      single oscillators at the edge of the locked arc, holding on and slipping, and they are the
+      most honest thing in the picture &mdash; the boundary is not a wall, it is a place where
+      belonging is marginal.</p>
+  </details>
+</div>
+<script src="../lib/gifenc.js"></script>
+<script src="../lib/controls.js"></script>
+<script>
+'use strict';
+
+// ---------------------------------------------------------------- model
+// Abrams–Strogatz (2004) ring chimera:
+//   dθi/dt = ω − (2π/N) Σj G(xi−xj) sin(θi − θj + α),  G(x) = (1 + A cos x)/2π
+// Because the kernel is a cosine, the double sum is exact in O(N): expand
+// cos(xi−xj) and e^{iθ} and the coupling collapses into three global complex
+// sums, so the model is the honest all-to-all one, not a truncation.
+//   Z0 = ⟨e^{iθ}⟩,  Zc = ⟨cos x · e^{iθ}⟩,  Zs = ⟨sin x · e^{iθ}⟩
+//   Zi = Z0 + A(cos xi · Zc + sin xi · Zs)     ← the local order parameter
+//   dθi/dt = ω − Im[ e^{i(θi+α)} · conj(Zi) ]
+// ω is 0: only phase differences matter, and the pattern rotates anyway.
+
+const N = 700;                 // one oscillator per pixel column of the cloth
+const TAU = Math.PI * 2;
+const DT = 0.05;               // integration step (RK4)
+const SIM_HZ = 30;             // ticks per wall-clock second at 1× speed
+let A = 0.995;                 // coupling-kernel shape
+let ALPHA = 1.39;              // phase lag; chimera window ≈ [1.36, 1.55]
+
+const xs = new Float64Array(N), cxa = new Float64Array(N), sxa = new Float64Array(N);
+const th = new Float64Array(N);
+const cph = new Float64Array(N), sph = new Float64Array(N);   // cos/sin cache
+const k1 = new Float64Array(N), k2 = new Float64Array(N),
+      k3 = new Float64Array(N), k4 = new Float64Array(N), tmp = new Float64Array(N);
+for (let i = 0; i < N; i++) {
+  xs[i] = -Math.PI + TAU * i / N;
+  cxa[i] = Math.cos(xs[i]); sxa[i] = Math.sin(xs[i]);
+}
+
+// Initial condition. The textbook seed (a narrow gaussian of random phase) finds
+// the chimera about four times in five — the rest of the time the ring locks
+// solid, which is a terrible first ten seconds. Adding a deterministic phase
+// twist outside the scrambled patch — the seed of the coherent arc's own phase
+// gradient — took it to 40/40 in headless trials.
+function seedRing() {
+  for (let i = 0; i < N; i++) {
+    const xi = xs[i], w = Math.exp(-0.76 * xi * xi);
+    th[i] = TAU * (Math.random() - 0.5) * w + 0.6 * Math.sin(xi) * (1 - w);
+  }
+}
+
+function deriv(ph, out) {
+  let z0r = 0, z0i = 0, zcr = 0, zci = 0, zsr = 0, zsi = 0;
+  for (let i = 0; i < N; i++) {
+    const c = Math.cos(ph[i]), s = Math.sin(ph[i]);
+    cph[i] = c; sph[i] = s;
+    z0r += c; z0i += s;
+    zcr += cxa[i] * c; zci += cxa[i] * s;
+    zsr += sxa[i] * c; zsi += sxa[i] * s;
+  }
+  z0r /= N; z0i /= N; zcr /= N; zci /= N; zsr /= N; zsi /= N;
+  const ca = Math.cos(ALPHA), sa = Math.sin(ALPHA);
+  for (let i = 0; i < N; i++) {
+    const zr = z0r + A * (cxa[i] * zcr + sxa[i] * zsr);
+    const zi = z0i + A * (cxa[i] * zci + sxa[i] * zsi);
+    const er = cph[i] * ca - sph[i] * sa, ei = sph[i] * ca + cph[i] * sa;
+    out[i] = -(ei * zr - er * zi);                 // −Im[e^{i(θ+α)} conj(Z)]
+  }
+}
+
+// Local coherence over a short window of the ring — the quantity the eye is
+// actually being shown. Prefix sums keep it O(N).
+const COH_HALF = 11;                       // ±11 of 700 ≈ ±1.6% of the ring
+const coh = new Float32Array(N);
+const pc = new Float64Array(N + 1), ps = new Float64Array(N + 1);
+function coherence() {
+  pc[0] = 0; ps[0] = 0;
+  for (let i = 0; i < N; i++) {
+    pc[i + 1] = pc[i] + Math.cos(th[i]);
+    ps[i + 1] = ps[i] + Math.sin(th[i]);
+  }
+  const W = COH_HALF, n = 2 * W + 1;
+  for (let i = 0; i < N; i++) {
+    const a = i - W, b = i + W;
+    let sc, ss;
+    if (a < 0)       { sc = pc[N] - pc[N + a] + pc[b + 1]; ss = ps[N] - ps[N + a] + ps[b + 1]; }
+    else if (b >= N) { sc = pc[N] - pc[a] + pc[b - N + 1]; ss = ps[N] - ps[a] + ps[b - N + 1]; }
+    else             { sc = pc[b + 1] - pc[a];             ss = ps[b + 1] - ps[a]; }
+    coh[i] = Math.hypot(sc, ss) / n;
+  }
+}
+
+function tick() {
+  deriv(th, k1);
+  for (let i = 0; i < N; i++) tmp[i] = th[i] + 0.5 * DT * k1[i];
+  deriv(tmp, k2);
+  for (let i = 0; i < N; i++) tmp[i] = th[i] + 0.5 * DT * k2[i];
+  deriv(tmp, k3);
+  for (let i = 0; i < N; i++) tmp[i] = th[i] + DT * k3[i];
+  deriv(tmp, k4);
+  for (let i = 0; i < N; i++) {
+    th[i] += DT * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]) / 6;
+  }
+  coherence();
+}
+function step() { tick(); weave(); }
+
+// perturb an arc: `pos` in oscillator units, `frac` of the ring, 0..1 strength
+function stirAt(pos, frac, strength) {
+  const sig = Math.max(2, N * frac);
+  const span = Math.ceil(sig * 2.6);
+  for (let d = -span; d <= span; d++) {
+    const i = ((Math.round(pos) + d) % N + N) % N;
+    const w = Math.exp(-(d / sig) * (d / sig));
+    th[i] += (Math.random() * 2 - 1) * Math.PI * strength * w;
+  }
+}
+
+// ---------------------------------------------------------------- palette
+// Cyclic phase ramps. Two-tone by design — a cool pole and a warm pole, with
+// deliberately different mid-tones on the way up and the way down, so the
+// direction of rotation stays legible without resorting to a hue wheel.
+const LUTN = 1024;
+const LR = new Float32Array(LUTN), LG = new Float32Array(LUTN), LB = new Float32Array(LUTN);
+const PALETTES = {
+  dusk:  { ash: [1.26, 0.84, 0.58], stops: [
+            [0.00, 10, 14, 40], [0.27, 46, 62, 116], [0.52, 214, 170, 96],
+            [0.76, 112, 60, 70], [1.00, 10, 14, 40]] },
+  ember: { ash: [1.32, 0.78, 0.50], stops: [
+            [0.00, 20, 8, 10], [0.27, 108, 32, 22], [0.52, 228, 176, 116],
+            [0.76, 84, 32, 50], [1.00, 20, 8, 10]] },
+  frost: { ash: [0.82, 1.00, 1.26], stops: [
+            [0.00, 7, 18, 38], [0.27, 32, 84, 110], [0.52, 198, 218, 234],
+            [0.76, 76, 62, 118], [1.00, 7, 18, 38]] },
+};
+let ASH = PALETTES.dusk.ash;
+
+function buildLUT(name) {
+  const st = PALETTES[name].stops;
+  ASH = PALETTES[name].ash;
+  for (let i = 0; i < LUTN; i++) {
+    const t = i / LUTN;
+    let a = st[0], b = st[1];
+    for (let s = 0; s < st.length - 1; s++) {
+      if (t >= st[s][0] && t <= st[s + 1][0]) { a = st[s]; b = st[s + 1]; break; }
+    }
+    let u = (t - a[0]) / ((b[0] - a[0]) || 1);
+    u = u * u * (3 - 2 * u);                       // smoothstep: no ramp creases
+    LR[i] = a[1] + (b[1] - a[1]) * u;
+    LG[i] = a[2] + (b[2] - a[2]) * u;
+    LB[i] = a[3] + (b[3] - a[3]) * u;
+  }
+}
+
+// An oscillator's colour is its phase, dimmed and de-saturated toward a warm ash
+// by how far its neighbourhood is from agreeing. Coherent arc: full-contrast
+// gold-through-indigo. Incoherent arc: banked embers.
+const OUT = [0, 0, 0];
+function shade(k, c, gain) {
+  const r0 = LR[k], g0 = LG[k], b0 = LB[k];
+  const y = 0.30 * r0 + 0.60 * g0 + 0.10 * b0;
+  const s = 0.24 + 0.76 * c;                        // saturation retained
+  const m = (0.10 + 0.90 * c * c) * gain;           // brightness
+  OUT[0] = (r0 * s + y * ASH[0] * (1 - s)) * m;
+  OUT[1] = (g0 * s + y * ASH[1] * (1 - s)) * m;
+  OUT[2] = (b0 * s + y * ASH[2] * (1 - s)) * m;
+  return OUT;
+}
+
+// ---------------------------------------------------------------- canvas
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+const GROUND = '#07090c';
+
+// Two histories of the same data.
+//   `annb`  — the last ~12 s at full tick resolution, drawn as radial filaments.
+//   `cloth` — the ring unrolled flat, newest row at the top, 70 s deep. One row
+//             per three ticks, averaged, so it lands 1:1 on the canvas: no
+//             downscaling, hence no moiré in the drifting arc.
+const ANN_ROWS = 352;                       // ~12 s at 30 Hz
+const CLOTH_EVERY = 3;
+const CLOTH_ROWS = 700;                     // 70 s at 30 Hz
+const cloth = document.createElement('canvas');
+cloth.width = N; cloth.height = CLOTH_ROWS;
+const clctx = cloth.getContext('2d');
+const annb = document.createElement('canvas');
+annb.width = N; annb.height = ANN_ROWS;
+const anctx = annb.getContext('2d');
+
+const annRow = anctx.createImageData(N, 1);
+const clothRow = clctx.createImageData(N, 1);
+const accR = new Float32Array(N), accG = new Float32Array(N), accB = new Float32Array(N);
+let accN = 0;
+let head = CLOTH_ROWS - 1;                  // where the next cloth row goes
+let woven = 0;
+
+function weave() {
+  const d = annRow.data;
+  for (let i = 0, p = 0; i < N; i++, p += 4) {
+    let f = th[i] / TAU; f -= Math.floor(f);
+    const o = shade((f * LUTN) | 0, coh[i], 1);
+    d[p] = o[0]; d[p + 1] = o[1]; d[p + 2] = o[2]; d[p + 3] = 255;
+    accR[i] += o[0]; accG[i] += o[1]; accB[i] += o[2];
+  }
+  // annulus history: shift one row older, then stamp the new one at the rim
+  anctx.globalCompositeOperation = 'copy';
+  anctx.drawImage(annb, 0, 0, N, ANN_ROWS - 1, 0, 1, N, ANN_ROWS - 1);
+  anctx.globalCompositeOperation = 'source-over';
+  anctx.putImageData(annRow, 0, 0);
+  annDirty = true;
+
+  if (++accN < CLOTH_EVERY) return;
+  const c = clothRow.data, k = 1 / accN;
+  for (let i = 0, p = 0; i < N; i++, p += 4) {
+    c[p] = accR[i] * k; c[p + 1] = accG[i] * k; c[p + 2] = accB[i] * k; c[p + 3] = 255;
+    accR[i] = 0; accG[i] = 0; accB[i] = 0;
+  }
+  accN = 0;
+  clctx.putImageData(clothRow, 0, head);
+  head = (head - 1 + CLOTH_ROWS) % CLOTH_ROWS;
+  if (woven < CLOTH_ROWS) woven++;
+}
+
+// two blits stitch the ring buffer back into one continuous fall of cloth;
+// the split is rounded to whole pixels or it shows as a hard horizontal seam
+function drawCloth(dx, dy, dw, dh, rows) {
+  const h1 = (head + 1) % CLOTH_ROWS;
+  const n = Math.min(rows, woven);
+  if (!n) return;
+  const tail = Math.min(n, CLOTH_ROWS - h1);
+  const hA = Math.round(tail * dh / n);
+  ctx.drawImage(cloth, 0, h1, N, tail, dx, dy, dw, hA);
+  if (n > tail) ctx.drawImage(cloth, 0, 0, N, n - tail, dx, dy + hA, dw, dh - hA);
+}
+
+const VIEWS = {
+  // the annulus leads and the cloth is the ground it rests on
+  woven: { emblem: true, cx: W / 2, cy: H / 2, rIn: 82, rOut: 252,
+           hole: 0.86, clothAlpha: 0.20 },
+  // the cloth alone, at full strength: plain weave beside jacquard
+  loom:  { emblem: false, cx: W / 2, cy: H / 2, rIn: 0, rOut: 0,
+           hole: 0, clothAlpha: 0.95 },
+};
+let view = VIEWS.woven;
+
+// a soft dark disc under the annulus, so the ring reads as an object resting on
+// the cloth rather than as more cloth
+const vig = document.createElement('canvas');
+vig.width = W; vig.height = H;
+function bakeVignette() {
+  const v = vig.getContext('2d');
+  v.clearRect(0, 0, W, H);
+  if (!view.emblem) return;
+  const R = view.rOut;
+  const g = v.createRadialGradient(view.cx, view.cy, R * 0.25, view.cx, view.cy, R * 1.75);
+  g.addColorStop(0, 'rgba(4,6,9,' + view.hole.toFixed(2) + ')');
+  g.addColorStop(0.5, 'rgba(4,6,9,' + (view.hole * 0.72).toFixed(2) + ')');
+  g.addColorStop(1, 'rgba(4,6,9,0)');
+  v.fillStyle = g;
+  v.fillRect(0, 0, W, H);
+}
+
+// Each oscillator's radial filament is its own recent history, blitted straight
+// out of the annulus buffer: source column i, newest row at the outer edge.
+// 700 rotated blits is too much to repeat every display frame, and the history
+// only moves on a sim tick, so the polar render is cached.
+const annOut = document.createElement('canvas');
+annOut.width = W; annOut.height = H;
+const aoctx = annOut.getContext('2d');
+let annDirty = true;
+
+function renderAnnulus() {
+  const cx = view.cx, cy = view.cy, rIn = view.rIn, rOut = view.rOut;
+  const span = rOut - rIn;
+  const wid = TAU * rOut / N * 1.35;          // just enough overlap to close gaps
+  aoctx.setTransform(1, 0, 0, 1, 0, 0);
+  aoctx.clearRect(0, 0, W, H);
+  for (let i = 0; i < N; i++) {
+    const c = cxa[i], s = sxa[i];
+    // rotate so local −y points along the ring direction: φ = angle + π/2
+    aoctx.setTransform(s, -c, c, s, cx, cy);
+    aoctx.drawImage(annb, i, 0, 1, ANN_ROWS, -wid / 2, -rOut, wid, span);
+  }
+  // soften the inner cut so the annulus fades into the void instead of ending
+  aoctx.setTransform(1, 0, 0, 1, 0, 0);
+  aoctx.globalCompositeOperation = 'destination-out';
+  const ig = aoctx.createRadialGradient(cx, cy, Math.max(1, rIn - 4), cx, cy, rIn + 30);
+  ig.addColorStop(0, 'rgba(0,0,0,1)');
+  ig.addColorStop(1, 'rgba(0,0,0,0)');
+  aoctx.fillStyle = ig;
+  aoctx.fillRect(cx - rIn - 32, cy - rIn - 32, (rIn + 32) * 2, (rIn + 32) * 2);
+  aoctx.globalCompositeOperation = 'source-over';
+  annDirty = false;
+}
+
+// bloom: one blurred half-res copy of the finished frame, added back
+const GS = 0.34;
+const gl = document.createElement('canvas');
+gl.width = W * GS; gl.height = H * GS;
+const gctx = gl.getContext('2d');
+
+function draw() {   // no interpolation: the frame IS the last tick's history
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  ctx.filter = 'none';
+  ctx.fillStyle = GROUND;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.globalAlpha = view.clothAlpha;
+  drawCloth(0, 0, W, H, CLOTH_ROWS);
+  ctx.globalAlpha = 1;
+  ctx.drawImage(vig, 0, 0);
+
+  if (view.emblem) {
+    if (annDirty) renderAnnulus();
+    ctx.drawImage(annOut, 0, 0);
+  }
+
+  gctx.globalCompositeOperation = 'copy';
+  gctx.filter = 'blur(2px)';          // 2 px at GS ≈ 6 px at full size
+  gctx.drawImage(cv, 0, 0, gl.width, gl.height);
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = 0.20;
+  ctx.drawImage(gl, 0, 0, W, H);
+  ctx.restore();
+
+  // the split, as a number
+  let locked = 0;
+  for (let i = 0; i < N; i++) if (coh[i] > 0.9) locked++;
+  ctx.font = '11px ui-monospace, SFMono-Regular, Menlo, monospace';
+  ctx.fillStyle = 'rgba(190,196,214,0.40)';
+  ctx.fillText('locked ' + Math.round(100 * locked / N) + '% of the ring · '
+    + N + ' oscillators · lag ' + ALPHA.toFixed(3), 14, H - 14);
+}
+
+// ---------------------------------------------------------------- interaction
+// Dragging stirs. Inside the annulus the angle under the pointer picks the spot;
+// anywhere else the horizontal position does, which is the cloth's own axis.
+let dragging = false;
+function ringPos(ev) {
+  const r = cv.getBoundingClientRect();
+  const px = (ev.clientX - r.left) * (W / r.width);
+  const py = (ev.clientY - r.top) * (H / r.height);
+  const dx = px - view.cx, dy = py - view.cy;
+  const rad = Math.hypot(dx, dy);
+  if (view.emblem && rad < view.rOut + 34 && rad > view.rIn - 34) {
+    return ((Math.atan2(dy, dx) + Math.PI) / TAU) * N;   // xs runs from −π at i=0
+  }
+  return px / W * N;
+}
+cv.addEventListener('pointerdown', ev => {
+  ev.preventDefault();
+  dragging = true;
+  cv.setPointerCapture(ev.pointerId);
+  stirAt(ringPos(ev), 0.040, 1.1);
+});
+cv.addEventListener('pointermove', ev => {
+  if (dragging) stirAt(ringPos(ev), 0.032, 0.95);
+});
+cv.addEventListener('pointerup', () => { dragging = false; });
+cv.addEventListener('pointercancel', () => { dragging = false; });
+
+// ---------------------------------------------------------------- ui
+const $ = id => document.getElementById(id);
+
+// The chimera needs ~20 s to settle out of the seed, and both histories need
+// filling. Doing that before the first paint costs a fraction of a second once
+// and buys a piece that is already itself when you arrive.
+const WARMUP = CLOTH_ROWS * CLOTH_EVERY;
+function reset() {
+  seedRing();
+  clctx.fillStyle = GROUND; clctx.fillRect(0, 0, N, CLOTH_ROWS);
+  accR.fill(0); accG.fill(0); accB.fill(0); accN = 0;
+  anctx.globalCompositeOperation = 'source-over';
+  anctx.fillStyle = GROUND; anctx.fillRect(0, 0, N, ANN_ROWS);
+  head = CLOTH_ROWS - 1; woven = 0;
+  coherence();
+  for (let t = 0; t < WARMUP; t++) step();
+}
+
+$('al').oninput = e => { ALPHA = +e.target.value; $('alv').textContent = ALPHA.toFixed(3); };
+$('ak').oninput = e => { A = +e.target.value; $('akv').textContent = A.toFixed(3); };
+$('pal').onchange = e => buildLUT(e.target.value);
+$('view').onchange = e => { view = VIEWS[e.target.value]; bakeVignette(); annDirty = true; };
+$('stir').onclick = () => stirAt(Math.random() * N, 0.14, 1.25);
+$('reset').onclick = reset;
+
+buildLUT('dusk');
+bakeVignette();
+reset();
+SketchControls.attach({ canvas: cv, step, draw, ticksPerSecond: SIM_HZ });
+</script>
+</body>
+</html>
