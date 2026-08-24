@@ -135,10 +135,15 @@
       pile through its first several hundred avalanches before the page paints, which is why there is
       already a line in the corner when you arrive, and why it goes on straightening while you watch. The
       inset is the piece's other
-      half and has its own correctness conditions: bins of equal <em>logarithmic</em> width, counts divided
-      by bin width to get a density &mdash; skip that and the plotted slope is wrong by exactly one &mdash;
-      and a least-squares fit that ignores the largest occupied bins, where the curve bends down not because
-      of physics but because the grid ends.</p>
+      half and has its own correctness conditions: bins of equal <em>logarithmic</em> width, and counts
+      divided by bin width to get a density &mdash; skip that and the plotted slope is wrong by exactly
+      one. What it deliberately does <em>not</em> have is a fitted line. The largest occupied bins bend
+      down because the grid ends, not because of physics; and for avalanche size counted as total
+      topplings, the 2D BTW pile is the famous awkward case &mdash; the distribution
+      <a href="https://arxiv.org/abs/cond-mat/9903270">multiscales rather than obeying one exponent
+      (Tebaldi, De Menech &amp; Stella, 1999)</a> &mdash; so a printed slope would claim a number the
+      model does not own. The panel shows an apparent power-law regime across this finite lattice, and
+      the straightness is left to your eye, which is the only reading the physics supports.</p>
     <p><strong>Aesthetics &mdash; the pile is quiet, the avalanche is light.</strong> The obvious rendering
       of a sandpile is four colours for four heights, and it is a diagram: legible, static, and it makes
       the avalanche invisible because a toppling cell just swaps one colour for another. So the height
@@ -531,22 +536,10 @@ function panel() {
     const ytop = Math.ceil(ymax * 2) / 2 + 0.4;
     const yof = v => AY1 - ((v - (ytop - YSPAN)) / YSPAN) * (AY1 - AY0);
 
-    // fitted line first, so the dots sit on top of it
-    if (fit) {
-      ctx.setLineDash([3, 3]);
-      ctx.strokeStyle = 'rgba(206, 238, 250, 0.5)';
-      ctx.lineWidth = 1.1;
-      const lx = k => AX0 + (k / XDEC) * (AX1 - AX0);
-      ctx.beginPath();
-      ctx.moveTo(lx(fit.x0), yof(fit.m * fit.x0 + fit.b));
-      ctx.lineTo(lx(fit.x1), yof(fit.m * fit.x1 + fit.b));
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.textAlign = 'right';
-      ctx.fillStyle = 'rgba(196, 232, 246, 0.8)';
-      ctx.fillText('slope −' + (-fit.m).toFixed(2), AX1, Math.min(AY1 - 2,
-        Math.max(AY0 + 9, yof(fit.m * fit.x1 + fit.b) - 6)));
-    }
+    // no fitted line is drawn: the fit is still computed (refit) as a headless
+    // verification instrument, but on a finite 2D BTW lattice total-toppling
+    // sizes multiscale rather than obey one exponent, so the panel shows only
+    // the raw density and lets the eye judge the straightness
 
     // the pile's own curve
     ctx.strokeStyle = 'rgba(112, 176, 208, 0.34)';
