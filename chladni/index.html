@@ -133,7 +133,9 @@
       Sixteen thousand grains hop when instantaneous |z| exceeds a threshold and then walk downhill
       of the time-averaged energy
       <code>½(A²ψ<sub>A</sub>² + B²ψ<sub>B</sub>²)</code>.
-      Shared nodes never hop. <em>One note</em> fades B&rsquo;s amplitude to zero, which is how you
+      Shared nodes never hop. Changing interval or <em>one note</em> stirs the salt for three seconds
+      so a new silence can be found; between interventions the figure holds.
+      <em>One note</em> fades B&rsquo;s amplitude to zero, which is how you
       watch a chord collapse into a specimen. Sound, if you ask for it, is two sines at 196 Hz
       times that ratio &mdash; G3 and (for the fifth) almost D4. Browsers block autoplay; the
       button is the gesture.</p>
@@ -155,6 +157,7 @@ const P = 16000;
 const BOOT = 24;
 const TH = 0.055;
 const HOP = 1.05;
+const AGITATE = 90; // 3 s at 30 Hz; long-jumps only inside this window
 const F0 = 196; // G3; visual Hz is independent and slower
 const VIS_HZ = 1.7;
 
@@ -192,6 +195,9 @@ let dragging = false;
 let xray = false;
 let soundOn = false;
 let audio = null;
+let agitate = 0;
+
+function stir() { agitate = AGITATE; }
 
 let seed = 0xC0FFEE;
 function rand() {
@@ -242,6 +248,7 @@ function setChord(name) {
   dphB = 2 * Math.PI * VIS_HZ * ratio / 30;
   recomputeE();
   tuneAudio();
+  stir();
 }
 
 function scatter() {
@@ -272,6 +279,7 @@ function step() {
   phB += dphB;
   const th = TH;
   const hop = HOP;
+  const jumping = agitate > 0;
   for (let p = 0; p < P; p++) {
     let x = pxp[p], y = pyp[p];
     let ix = x | 0, iy = y | 0;
@@ -288,9 +296,8 @@ function step() {
     } else {
       x += (rand() - 0.5) * 0.05;
       y += (rand() - 0.5) * 0.05;
-      // a few grains always wander, so a new silence (one note, a new interval)
-      // can be found without throwing the salt again
-      if (rand() < 0.01) {
+      // long-jump only while the plate is finding a new silence
+      if (jumping && rand() < 0.04) {
         x += (rand() - 0.5) * 10;
         y += (rand() - 0.5) * 10;
       }
@@ -299,6 +306,7 @@ function step() {
     if (y < 1) y = 1; else if (y > G - 2) y = G - 2;
     pxp[p] = x; pyp[p] = y;
   }
+  if (agitate > 0) agitate--;
 }
 
 function lerp(a, b, t) { return a + (b - a) * t; }
@@ -379,6 +387,7 @@ $('lock').oninput = e => {
   $('lockv').textContent = lock < 0.03 ? 'chord' : lock > 0.97 ? 'one' : lock.toFixed(2);
   recomputeE();
   tuneAudio();
+  stir();
 };
 $('chord').onchange = e => setChord(e.target.value);
 $('reset').onclick = () => { scatter(); };
@@ -434,6 +443,7 @@ let attached = false;
 function boot() {
   setChord(chord);
   scatter();
+  agitate = 0; // scatter already seeds; don't keep jumping on first watch
   for (let t = 0; t < BOOT; t++) step();
   if (!attached) {
     attached = true;
