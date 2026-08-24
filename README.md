@@ -2,6 +2,7 @@
 
 Small algorithmic-art sketches. Served at https://unforcedagi.github.io/sketches/
 
+- [aftershock](aftershock/) — an Abelian sandpile drawn as the fading memory of its avalanches
 - [friend-enemy-dots](friend-enemy-dots/) — after https://x.com/IsaacKing314/status/2086721066106253347
 - [firefly-sync](firefly-sync/) — integrate-and-fire fireflies converging on unified pulsing (Kuramoto)
 - [rps-ecology](rps-ecology/) — three tribes chasing each other in a cycle; spiral waves, conversions
