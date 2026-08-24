@@ -778,6 +778,7 @@ const reliefReadout = () => {
 $('s-relief').oninput = e => {
   RELIEF = +e.target.value / 100; reliefReadout(); buildRelief();
 };
+reliefReadout();   // ?mode=1 boots must show the centre camera too
 $('reset').onclick = () => freshPile();
 $('mode').onclick = () => {
   // the two drives are different pieces: noise needs a critical pile to sit on,
