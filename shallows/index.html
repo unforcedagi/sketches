@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shallows</title>
+<style>
+  html, body { margin: 0; min-height: 100%; background: #071014; color: #d2ddd8;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  #wrap { display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 16px; box-sizing: border-box; }
+  #head { width: 700px; max-width: 100%; margin: 2px 0; }
+  h1 { color: #e7f2ea; font-size: 18px; font-weight: 600; letter-spacing: .03em; margin: 0; }
+  #tag { color: #7f908c; font-size: 12px; line-height: 1.55; margin: 3px 0 0; }
+  #try { color: #a9b9b3; font-size: 11.5px; line-height: 1.6; margin: 9px 0 0;
+    padding: 5px 10px; border-left: 2px solid #1e5a58; border-radius: 0 5px 5px 0;
+    background: rgba(40, 140, 120, .045); }
+  #try .lead, .glabel { color: #5c6f6c; font-size: 10px; letter-spacing: .09em;
+    text-transform: uppercase; }
+  #try .lead { margin-right: 4px; }
+  #try .hot { color: #d6e36a; font-weight: 600; }
+  #try .xray { color: #8fd0c8; font-weight: 600; }
+  canvas { width: 700px; height: 700px; max-width: 100%; background: #071014;
+    border-radius: 10px; cursor: crosshair; touch-action: none; }
+  #controls, #controls2 { display: flex; gap: 10px; align-items: center; justify-content: center;
+    flex-wrap: wrap; max-width: 730px; font-size: 12px; }
+  #controls2 { color: #7d8f8b; font-size: 11.5px; }
+  .grp, label { display: inline-flex; align-items: center; gap: 6px; }
+  button, select { color: #d2ddd8; background: #121c1e; border: 1px solid #2a3c3c;
+    border-radius: 6px; padding: 4px 10px; font: inherit; cursor: pointer; }
+  button:hover { background: #182628; border-color: #3d6a64; }
+  button.active { background: #1c3332; border-color: #7ac8b4; color: #e7f2ea; }
+  input[type=range] { width: 92px; accent-color: #c6d45e; }
+  #meter { width: 700px; max-width: 100%; height: 24px; display: flex; align-items: center;
+    gap: 9px; color: #6d807c; font-size: 10.5px; }
+  #pulse { height: 2px; flex: 1; position: relative; overflow: hidden; background: #13201f; }
+  #pulse i { display: block; height: 100%; width: 0;
+    background: linear-gradient(90deg,#1a5a52,#b7d45a,#f4f3c8); }
+  #credit { max-width: 650px; color: #6d7f7b; font-size: 11px; line-height: 1.65; text-align: center; }
+  #credit code { color: #9bb8a8; }
+  a { color: #7ac8b4; }
+  #essay { max-width: 640px; color: #8fa09c; font-size: 12.5px; line-height: 1.7;
+    margin-bottom: 25px; }
+  #essay summary { color: #6d7f7b; cursor: pointer; font-size: 11px; text-align: center; }
+  #essay p { margin: 12px 0; }
+  #essay strong { color: #dbe8e2; }
+  #essay em { color: #c6d45e; font-style: normal; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header id="head">
+    <h1>Shallows</h1>
+    <p id="tag">the bright net is not the water. it is where sunlight, bent by the surface, agreed to land.</p>
+    <p id="try"><span class="lead">try this first</span> wait for two rings to meet &mdash; the bright
+      X is not a thing in the pond. Then <span class="hot">click twice, far apart</span>. Hold
+      <span class="xray">X</span> to see the ripples that are doing the bending.</p>
+  </header>
+  <canvas id="c" width="720" height="720"></canvas>
+  <div id="meter"><span id="status">gathering</span><span id="pulse"><i></i></span><span id="count">focus 1.0</span></div>
+  <div id="controls">
+    <span class="grp"><span class="glabel">look</span>
+      <select id="look" title="floor is the caustic; surface is the water; both layers them">
+        <option value="floor">floor</option>
+        <option value="surface">surface</option>
+        <option value="both">both</option>
+      </select>
+      <select id="palette">
+        <option value="lagoon">lagoon</option>
+        <option value="noon">noon</option>
+        <option value="dusk">dusk</option>
+      </select>
+    </span>
+    <span class="grp"><span class="glabel">run</span>
+      <button id="still" title="stop the rain; existing waves keep travelling">still</button>
+      <button id="reset">reset</button>
+    </span>
+  </div>
+  <div id="controls2">
+    <span class="glabel">tune</span>
+    <label title="distance from surface to floor, in cells. Deeper pool, larger rings, softer folds.">depth
+      <input id="depth" type="range" min="36" max="140" value="80"><span id="depthv">80</span></label>
+    <label title="random stones per second. Zero is a quiet pond you have to drop yourself.">rain
+      <input id="rain" type="range" min="0" max="40" value="12"><span id="rainv">1.2/s</span></label>
+  </div>
+  <div id="credit">a 2-D wave equation on the surface; each cell refracts a downward ray through
+    Snell&rsquo;s law (<code>n<sub>air</sub>/n<sub>water</sub> = 1/1.333</code>) onto a plane below.
+    Brightness is the inverse Jacobian of that map &mdash; where neighbouring rays converge, the floor
+    lights up · <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
+  <details id="essay">
+    <summary>why this is interesting &mdash; philosophy &middot; technique &middot; aesthetics</summary>
+    <p><strong>Philosophy &mdash; brightness is coincidence.</strong> Nothing yellow lives in the water.
+      A ray of sunlight hits the surface, bends, and strikes the floor; its neighbour does the same, a
+      little differently, because the surface under it is a little different. Most of the floor is
+      visited by about one family of rays. Some tiles are visited by many families at once, and those
+      tiles light up. The picture is not a picture of waves. It is a picture of independent paths
+      agreeing. Aftershock, in this collection, draws where an event <em>happened</em>. This draws
+      where many events that never met still land on the same stone.</p>
+    <p><strong>Technique &mdash; a cheap lens, then its envelope.</strong> The surface is a discrete
+      wave equation: height and velocity, a four-neighbour Laplacian, a damping sponge at the rim so
+      the square does not ring like a drum. Each tick, every interior cell takes the local slope,
+      builds a normal, and refracts a downward incident ray from air into water. The ray is followed
+      to a plane <em>depth</em> cells below. Intensity is not a photon count. It is
+      <code>1 / area</code> of the image of a surface triangle on that plane &mdash; the inverse
+      Jacobian of the floor map, which is the definition of a caustic. A Gaussian bump is a weak
+      convex lens; the fold of that lens is a ring. Rain is a chorus of those lenses, and the bright
+      X where two rings cross is two folds sharing a focal set. Slopes are scaled 2.2&times; so that
+      pond-like depth-to-amplitude ratios fit on a 240-cell grid without the waves having to be
+      physically tall.</p>
+    <p><strong>Aesthetics &mdash; draw the agreement, not the pond.</strong> The default image is only
+      the floor. Mixing a dim height-shade into that image would repeat a mistake: a second reading
+      that does not actually read, just lifts the black. Surface is a separate view (the look menu, or
+      hold X) so you can see the cause without contaminating the effect. Log exposure keeps a tight
+      focus and a broad wash in one picture; the meter is the ratio of the brightest tile to the mean,
+      which is how concentrated the agreement currently is. The palettes stay in water &mdash; lagoon,
+      noon, dusk &mdash; because the phenomenon is sunlight, not a heatmap of a field.</p>
+  </details>
+</div>
+<script src="../lib/gifenc.js"></script>
+<script src="../lib/controls.js"></script>
+<script>
+'use strict';
+
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const S = 240, N = S * S;
+const off = document.createElement('canvas'); off.width = S; off.height = S;
+const ox = off.getContext('2d'), image = ox.createImageData(S, S), pixels = image.data;
+const h = new Float32Array(N), vel = new Float32Array(N);
+const hitsX = new Float32Array(N), hitsY = new Float32Array(N);
+const cau = new Float32Array(N), tmp = new Float32Array(N), shade = new Float32Array(N);
+const C2 = 0.16, DAMP = 0.997, SPONGE = 16, SLOPE = 2.2, IOR = 1.333;
+let depth = 80, rainPerSec = 1.2, raining = true, look = 'floor', palette = 'lagoon';
+let xray = false, dragging = false, lastX = -1, lastY = -1, rainAcc = 0, lastFocus = 1;
+const status = document.getElementById('status'), count = document.getElementById('count');
+const pulse = document.querySelector('#pulse i');
+
+let seed = 0x5a1105;
+function rand() { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) / 4294967296; }
+
+function drop(cx, cy, amp, sigma) {
+  const r2 = sigma * sigma, rmax = sigma * 3;
+  const x0 = Math.max(1, (cx - rmax) | 0), x1 = Math.min(S - 1, (cx + rmax + 1) | 0);
+  const y0 = Math.max(1, (cy - rmax) | 0), y1 = Math.min(S - 1, (cy + rmax + 1) | 0);
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+    const d2 = (x - cx) * (x - cx) + (y - cy) * (y - cy);
+    h[y * S + x] += amp * Math.exp(-d2 / r2);
+  }
+}
+
+function resetWorld(reseed) {
+  if (reseed) seed = (Math.random() * 0xffffffff) >>> 0;
+  h.fill(0); vel.fill(0); cau.fill(0);
+  drop(S * 0.35, S * 0.40, 2.6, 7);
+  drop(S * 0.62, S * 0.48, 2.1, 5.5);
+  drop(S * 0.50, S * 0.62, 1.8, 5);
+  drop(S * 0.28, S * 0.68, 1.5, 4.5);
+  drop(S * 0.72, S * 0.30, 1.9, 6);
+  for (let i = 0; i < 70; i++) stepWave();
+}
+
+function stepWave() {
+  for (let y = 1; y < S - 1; y++) {
+    const yS = y * S;
+    for (let x = 1; x < S - 1; x++) {
+      const i = yS + x;
+      const lap = h[i - 1] + h[i + 1] + h[i - S] + h[i + S] - 4 * h[i];
+      vel[i] += C2 * lap;
+      const e = Math.min(x, y, S - 1 - x, S - 1 - y);
+      const s = e < SPONGE ? 0.88 + 0.12 * (e / SPONGE) : 1;
+      vel[i] *= DAMP * s;
+    }
+  }
+  for (let i = 0; i < N; i++) h[i] += vel[i];
+}
+
+function splat(x, y, w) {
+  if (x < 0) x = 0; else if (x > S - 1.001) x = S - 1.001;
+  if (y < 0) y = 0; else if (y > S - 1.001) y = S - 1.001;
+  const x0 = x | 0, y0 = y | 0, fx = x - x0, fy = y - y0;
+  const i = y0 * S + x0;
+  cau[i] += w * (1 - fx) * (1 - fy);
+  if (x0 + 1 < S) cau[i + 1] += w * fx * (1 - fy);
+  if (y0 + 1 < S) cau[i + S] += w * (1 - fx) * fy;
+  if (x0 + 1 < S && y0 + 1 < S) cau[i + S + 1] += w * fx * fy;
+}
+
+function caustics() {
+  cau.fill(0);
+  const eta = 1 / IOR;
+  for (let y = 1; y < S - 1; y++) {
+    const yS = y * S;
+    for (let x = 1; x < S - 1; x++) {
+      const i = yS + x;
+      const hx = (h[i + 1] - h[i - 1]) * 0.5 * SLOPE;
+      const hy = (h[i + S] - h[i - S]) * 0.5 * SLOPE;
+      let nx = -hx, ny = -hy, nz = 1;
+      const inv = 1 / Math.sqrt(nx * nx + ny * ny + nz * nz);
+      nx *= inv; ny *= inv; nz *= inv;
+      shade[i] = Math.max(0, nz * 0.75 + nx * 0.18 + ny * 0.32);
+      const cosi = nz;
+      const k = 1 - eta * eta * (1 - cosi * cosi);
+      if (k <= 0) { hitsX[i] = x; hitsY[i] = y; continue; }
+      const f = eta * cosi - Math.sqrt(k);
+      const rx = f * nx, ry = f * ny, rz = -eta + f * nz;
+      const t = rz < -1e-4 ? -depth / rz : depth;
+      hitsX[i] = x + t * rx;
+      hitsY[i] = y + t * ry;
+    }
+  }
+  for (let y = 1; y < S - 2; y++) {
+    const yS = y * S;
+    for (let x = 1; x < S - 2; x++) {
+      const i = yS + x;
+      const ax = hitsX[i], ay = hitsY[i];
+      const bx = hitsX[i + 1], by = hitsY[i + 1];
+      const cx = hitsX[i + S], cy = hitsY[i + S];
+      const area = Math.abs((bx - ax) * (cy - ay) - (cx - ax) * (by - ay));
+      splat((ax + bx + cx) / 3, (ay + by + cy) / 3, 1 / Math.max(area, 0.04));
+    }
+  }
+  for (let y = 1; y < S - 1; y++) {
+    const yS = y * S;
+    for (let x = 1; x < S - 1; x++) {
+      const i = yS + x;
+      tmp[i] = (cau[i - 1] + cau[i] * 2 + cau[i + 1]) * 0.25;
+    }
+  }
+  for (let y = 1; y < S - 1; y++) {
+    const yS = y * S;
+    for (let x = 1; x < S - 1; x++) {
+      const i = yS + x;
+      cau[i] = (tmp[i - S] + tmp[i] * 2 + tmp[i + S]) * 0.25;
+    }
+  }
+}
+
+function shadeOnly() {
+  for (let y = 1; y < S - 1; y++) {
+    const yS = y * S;
+    for (let x = 1; x < S - 1; x++) {
+      const i = yS + x;
+      const hx = (h[i + 1] - h[i - 1]) * 0.5 * SLOPE;
+      const hy = (h[i + S] - h[i - S]) * 0.5 * SLOPE;
+      const inv = 1 / Math.sqrt(hx * hx + hy * hy + 1);
+      shade[i] = Math.max(0, inv * 0.75 + (-hx * inv) * 0.18 + (-hy * inv) * 0.32);
+    }
+  }
+}
+
+function step() {
+  stepWave();
+  if (raining && rainPerSec > 0) {
+    rainAcc += rainPerSec / 30;
+    while (rainAcc >= 1) {
+      rainAcc--;
+      drop(18 + rand() * (S - 36), 18 + rand() * (S - 36), 1.2 + rand() * 1.1, 3.8 + rand() * 2.4);
+    }
+  }
+  if (look === 'surface' && !xray) shadeOnly();
+  else caustics();
+}
+
+const palettes = {
+  lagoon: [[4, 10, 16], [6, 36, 44], [18, 92, 88], [170, 196, 92], [242, 246, 210]],
+  noon:   [[6, 16, 26], [12, 64, 88], [36, 150, 168], [170, 220, 226], [252, 254, 255]],
+  dusk:   [[8, 5, 14], [36, 16, 44], [96, 38, 68], [220, 108, 58], [255, 214, 150]]
+};
+const surfaceAlbedo = {
+  lagoon: [18, 48, 52],
+  noon:   [24, 70, 88],
+  dusk:   [40, 24, 48]
+};
+
+function lerpStop(stops, t) {
+  t = Math.max(0, Math.min(.999, t)) * (stops.length - 1);
+  const a = t | 0, m = t - a, ca = stops[a], cb = stops[a + 1];
+  return [ca[0] + (cb[0] - ca[0]) * m, ca[1] + (cb[1] - ca[1]) * m, ca[2] + (cb[2] - ca[2]) * m];
+}
+
+function draw() {
+  const stops = palettes[palette], albedo = surfaceAlbedo[palette];
+  const showSurface = xray || look === 'surface';
+  const showFloor = !xray && look !== 'surface';
+  let max = 0, mean = 0;
+  if (showFloor) {
+    for (let i = 0; i < N; i++) { if (cau[i] > max) max = cau[i]; mean += cau[i]; }
+    mean /= N;
+  }
+  const denom = Math.log1p((max + 1e-6) * 1.8);
+  for (let i = 0, p = 0; i < N; i++, p += 4) {
+    let r, g, b;
+    if (showFloor) {
+      const t = Math.pow(Math.log1p(cau[i] * 1.8) / denom, 0.72);
+      const c = lerpStop(stops, t);
+      r = c[0]; g = c[1]; b = c[2];
+      if (look === 'both') {
+        const s = 0.40 + 0.60 * shade[i];
+        r *= s; g *= s; b *= s;
+        const spec = Math.pow(shade[i], 12) * 70;
+        r += spec; g += spec * 0.95; b += spec * 0.8;
+      }
+    } else {
+      const s = shade[i];
+      r = albedo[0] * (0.25 + 0.75 * s);
+      g = albedo[1] * (0.25 + 0.75 * s);
+      b = albedo[2] * (0.25 + 0.75 * s);
+      const spec = Math.pow(s, 14) * 90;
+      r += spec; g += spec * 0.95; b += spec * 0.85;
+    }
+    pixels[p] = r < 255 ? r : 255;
+    pixels[p + 1] = g < 255 ? g : 255;
+    pixels[p + 2] = b < 255 ? b : 255;
+    pixels[p + 3] = 255;
+  }
+  ox.putImageData(image, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(off, 0, 0, cv.width, cv.height);
+  const focus = showFloor ? max / (mean + 1e-6) : 1;
+  lastFocus = focus;
+  status.textContent = xray ? 'surface' : raining ? 'rain' : 'still';
+  count.textContent = `focus ${focus.toFixed(1)}`;
+  pulse.style.width = `${Math.min(100, Math.log10(focus + 1) * 48)}%`;
+}
+
+function canvasCell(e) {
+  const r = cv.getBoundingClientRect();
+  return [(e.clientX - r.left) / r.width * S, (e.clientY - r.top) / r.height * S];
+}
+function press(e, isMove) {
+  const [x, y] = canvasCell(e);
+  if (isMove && Math.hypot(x - lastX, y - lastY) < 4) return;
+  lastX = x; lastY = y;
+  drop(x, y, isMove ? 1.15 : 2.4, isMove ? 3.6 : 5.5);
+}
+cv.onpointerdown = e => { dragging = true; lastX = -99; cv.setPointerCapture(e.pointerId); press(e, false); };
+cv.onpointermove = e => { if (dragging) press(e, true); };
+cv.onpointerup = () => { dragging = false; };
+document.addEventListener('keydown', e => { if (e.key.toLowerCase() === 'x') xray = true; });
+document.addEventListener('keyup', e => { if (e.key.toLowerCase() === 'x') xray = false; });
+window.addEventListener('blur', () => { xray = false; });
+
+document.getElementById('look').onchange = e => { look = e.target.value; };
+document.getElementById('palette').onchange = e => { palette = e.target.value; };
+document.getElementById('reset').onclick = () => resetWorld(true);
+document.getElementById('still').onclick = function () {
+  raining = !raining;
+  this.classList.toggle('active', !raining);
+  this.textContent = raining ? 'still' : 'rain';
+};
+document.getElementById('depth').oninput = e => {
+  depth = +e.target.value; document.getElementById('depthv').textContent = depth;
+};
+document.getElementById('rain').oninput = e => {
+  rainPerSec = +e.target.value / 10;
+  document.getElementById('rainv').textContent = rainPerSec.toFixed(1) + '/s';
+};
+
+resetWorld(false);
+SketchControls.attach({ canvas: cv, step, draw, ticksPerSecond: 30 });
+</script>
+</body>
+</html>
