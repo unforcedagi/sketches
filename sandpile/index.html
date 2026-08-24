@@ -293,6 +293,9 @@ function record(s) {
 function binWidth(k) { return Math.exp((k + 1) * LB) - Math.exp(k * LB); }
 
 function refit() {
+  // the witness measures only the claim it defends: no fit on the
+  // deterministic drive, whose bulk relaxations are not SOC events
+  if (MODE === 1) { fit = null; return; }
   const Hh = hist[MODE], T = total[MODE];
   if (T < 40) { fit = null; return; }
   let kmax = -1;
@@ -476,6 +479,37 @@ const XDEC = 5.6, YSPAN = 9;
 const SUP = ['', '', '²', '³', '⁴', '⁵', '⁶'];
 
 function panel() {
+  // in centre mode there is no statistic to show: bulk deterministic dumps
+  // are not SOC events, and a log-log panel would dress the crystal in the
+  // random drive's claim. the frame stays, the instrument stands down.
+  if (MODE === 1) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.beginPath();
+    const rr = 7;
+    ctx.moveTo(PX + rr, PY);
+    ctx.arcTo(PX + PW, PY, PX + PW, PY + PH, rr);
+    ctx.arcTo(PX + PW, PY + PH, PX, PY + PH, rr);
+    ctx.arcTo(PX, PY + PH, PX, PY, rr);
+    ctx.arcTo(PX, PY, PX + PW, PY, rr);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(5, 10, 15, 0.76)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(120, 180, 210, 0.20)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.font = '8.5px ui-monospace, Menlo, monospace';
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(140, 178, 198, 0.85)';
+    ctx.fillText('DETERMINISTIC DRIVE', PX + 12, PY + 15);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(104, 134, 152, 0.55)';
+    ctx.fillText('no noise, no distribution', (PX + PX + PW) / 2, PY + PH / 2 - 2);
+    ctx.fillText('the statement is the crystal', (PX + PX + PW) / 2, PY + PH / 2 + 12);
+    ctx.restore();
+    return;
+  }
   const Hh = hist[MODE], T = total[MODE];
   ctx.save();
   ctx.globalCompositeOperation = 'source-over';
@@ -734,8 +768,15 @@ applyMode();
 $('s-rain').oninput   = e => { RAIN = +e.target.value; $('v-rain').textContent = RAIN; };
 $('s-relax').oninput  = e => { RELAX = +e.target.value; $('v-relax').textContent = RELAX; };
 $('s-glow').oninput   = e => { GLOW = +e.target.value / 100; $('v-glow').textContent = GLOW.toFixed(2); };
+const reliefReadout = () => {
+  // centre mode runs a different camera (light gain ×0.085, relief ×3.1) or
+  // the crystal is invisible — say so instead of letting the slider lie
+  $('v-relief').textContent = MODE
+    ? (RELIEF * 3.1).toFixed(2) + ' (centre camera ×3.1)'
+    : RELIEF.toFixed(2);
+};
 $('s-relief').oninput = e => {
-  RELIEF = +e.target.value / 100; $('v-relief').textContent = RELIEF.toFixed(2); buildRelief();
+  RELIEF = +e.target.value / 100; reliefReadout(); buildRelief();
 };
 $('reset').onclick = () => freshPile();
 $('mode').onclick = () => {
@@ -744,6 +785,7 @@ $('mode').onclick = () => {
   MODE = MODE ? 0 : 1;
   $('mode').innerHTML = MODE ? 'drop &middot; centre' : 'drop &middot; random';
   applyMode();
+  reliefReadout();
   h.fill(0); heat.fill(0); qd.fill(0);
   frontN = 0; nextN = 0; curSize = 0; active = false; tainted = false; lastSize = 0;
   flash.fill(0); fit = null;
