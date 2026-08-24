@@ -19,6 +19,7 @@
     text-transform: uppercase; }
   #try .lead { margin-right: 4px; }
   #try .hot { color: #ee9844; font-weight: 600; }
+  #try .xray { color: #bd8ee8; font-weight: 600; }
   canvas { width: 700px; height: 700px; max-width: 100%; background: #080708;
     border-radius: 10px; cursor: crosshair; image-rendering: pixelated; touch-action: none; }
   #controls, #controls2 { display: flex; gap: 10px; align-items: center; justify-content: center;
@@ -51,7 +52,8 @@
     <p id="tag">one grain at a time, a quiet surface teaches itself how to fail at every scale.</p>
     <p id="try"><span class="lead">try this first</span> wait through the small flickers for a large
       rupture &mdash; the faint red veins are its memory, not the sand itself. Then
-      <span class="hot">press and drag</span> to load a fault of your own.</p>
+      <span class="hot">press and drag</span> to add grains one by one; hold
+      <span class="xray">X</span> to see the load the surface is carrying.</p>
   </header>
   <canvas id="c" width="699" height="699"></canvas>
   <div id="meter"><span id="status">quiet</span><span id="pulse"><i></i></span><span id="count">0 topplings</span></div>
@@ -60,14 +62,14 @@
       <select id="palette"><option value="ember">ember</option><option value="bruise">bruise</option><option value="ash">ash</option></select>
       <label>memory <input id="memory" type="range" min="930" max="998" value="985"><span id="memoryv">long</span></label>
     </span>
-    <span class="grp"><span class="glabel">run</span><button id="strike">strike</button><button id="reset">reset</button></span>
+    <span class="grp"><span class="glabel">run</span><button id="reset">reset</button></span>
   </div>
   <div id="controls2">
     <span class="glabel">tune</span>
     <label title="how many grains the world receives after each avalanche">pressure
       <input id="pressure" type="range" min="1" max="32" value="6"><span id="pressurev">6</span></label>
     <label title="where grains fall: the center, a narrow region, or anywhere">weather
-      <select id="weather"><option value="center">epicentre</option><option value="fault">fault</option><option value="rain">rain</option></select></label>
+      <select id="weather"><option value="rain">rain</option><option value="fault">fault</option><option value="center">epicentre</option></select></label>
   </div>
   <div id="credit">the Bak&ndash;Tang&ndash;Wiesenfeld sandpile (1987): a cell holding four grains gives
     one to each neighbour; grains falling off the edge disappear. Nothing chooses the size of the next event.
@@ -106,7 +108,7 @@ const ox = off.getContext('2d'), image = ox.createImageData(S, S), pixels = imag
 const grains = new Uint16Array(N), heat = new Float32Array(N), flash = new Float32Array(N);
 const queue = new Int32Array(N), queued = new Uint8Array(N);
 let qHead = 0, qTail = 0, qCount = 0, currentSize = 0, lastSize = 0, eventNo = 0;
-let decay = .985, pressure = 6, palette = 'ember', dragging = false;
+let decay = .985, pressure = 6, palette = 'ember', dragging = false, xray = false, lastPaint = -1;
 const status = document.getElementById('status'), count = document.getElementById('count');
 const pulse = document.querySelector('#pulse i');
 
@@ -192,14 +194,19 @@ const palettes = {
 function draw() {
   const stops = palettes[palette];
   for (let i = 0, p = 0; i < N; i++, p += 4) {
+    if (xray) {
+      const load = [[9,8,10],[38,25,31],[91,46,48],[215,127,65]][Math.min(3, grains[i])];
+      pixels[p] = load[0]; pixels[p + 1] = load[1]; pixels[p + 2] = load[2]; pixels[p + 3] = 255;
+      continue;
+    }
     // Log exposure preserves both a world-sized rupture and its hairline aftershocks.
-    const h = Math.log1p(heat[i] * 2.2) / Math.log(27), base = grains[i] * 1.7;
+    const h = Math.log1p(heat[i] * 2.2) / Math.log(27);
     const t = Math.max(0, Math.min(.999, Math.pow(h, .68))) * (stops.length - 1);
     const a = t | 0, mix = t - a, ca = stops[a], cb = stops[a + 1];
     const glow = flash[i] * 85;
-    pixels[p] = ca[0] + (cb[0] - ca[0]) * mix + base + glow;
-    pixels[p + 1] = ca[1] + (cb[1] - ca[1]) * mix + base * .7 + glow * .75;
-    pixels[p + 2] = ca[2] + (cb[2] - ca[2]) * mix + base * .8 + glow * .35; pixels[p + 3] = 255;
+    pixels[p] = ca[0] + (cb[0] - ca[0]) * mix + glow;
+    pixels[p + 1] = ca[1] + (cb[1] - ca[1]) * mix + glow * .75;
+    pixels[p + 2] = ca[2] + (cb[2] - ca[2]) * mix + glow * .35; pixels[p + 3] = 255;
   }
   ox.putImageData(image, 0, 0);
   ctx.imageSmoothingEnabled = false;
@@ -216,14 +223,16 @@ function canvasCell(e) {
   return [(e.clientX - r.left) / r.width * S, (e.clientY - r.top) / r.height * S];
 }
 function press(e) {
-  const [x, y] = canvasCell(e), radius = e.shiftKey ? 8 : 3;
-  for (let j = -radius; j <= radius; j++) for (let i = -radius; i <= radius; i++)
-    if (i * i + j * j <= radius * radius) addAt(x + i, y + j, 1 + ((radius - Math.hypot(i,j)) / 2 | 0));
+  const [x, y] = canvasCell(e), cell = (y | 0) * S + (x | 0);
+  if (cell === lastPaint) return;
+  lastPaint = cell; addAt(x, y, 1);
 }
-cv.onpointerdown = e => { dragging = true; cv.setPointerCapture(e.pointerId); press(e); };
+cv.onpointerdown = e => { dragging = true; lastPaint = -1; cv.setPointerCapture(e.pointerId); press(e); };
 cv.onpointermove = e => { if (dragging) press(e); };
-cv.onpointerup = () => { dragging = false; };
-document.getElementById('strike').onclick = () => addAt(S / 2, S / 2, 600);
+cv.onpointerup = () => { dragging = false; lastPaint = -1; };
+document.addEventListener('keydown', e => { if (e.key.toLowerCase() === 'x') xray = true; });
+document.addEventListener('keyup', e => { if (e.key.toLowerCase() === 'x') xray = false; });
+window.addEventListener('blur', () => { xray = false; });
 document.getElementById('reset').onclick = resetWorld;
 document.getElementById('palette').onchange = e => { palette = e.target.value; };
 document.getElementById('memory').oninput = e => {
