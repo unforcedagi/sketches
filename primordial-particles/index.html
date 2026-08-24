@@ -90,7 +90,7 @@
     <span class="grp">
       <span class="glabel">lineage</span>
       <button id="blood" title="observer-only: repaint every living family one colour — the physics never notices; new lineages re-diverge by drift">one blood</button>
-      <span id="stats" title="division counts stand down for ~4 s after a physics slider moves — a hand on the dial cannot mint divisions">&mdash;</span>
+      <span id="stats" title="division counts stand down for ~4 s after a physics slider moves — a hand on the dial cannot mint divisions. a contracting ring marks a lineage ending in a merger; an expanding one marks a division">&mdash;</span>
     </span>
   </div>
   <div id="credit">the Primordial Particle System of Schmickl, Stefanec &amp; Crailsheim
@@ -142,7 +142,9 @@
       continuing. Two clusters claiming the same parent is a division: the larger daughter carries
       the mother line's hue on unchanged, each bud takes it plus a drift. A cluster whose members
       mostly remember nothing is a nucleation, and gets a fresh hue off a golden-angle sequence.
-      Merges fall out for free: the bigger parent wins the vote and the other lineage ends.</p>
+      Merges fall out for free: the bigger parent wins the vote, the other lineage ends, and a
+      contracting ring in the absorbed family's colour marks where &mdash; death is the other half
+      of a family tree, and it gets the same one-ring honesty as birth.</p>
     <p><strong>Aesthetics &mdash; darkfield, not diagram.</strong> The paper colours particles by
       neighbour count in flat categorical steps, which is the right choice for a figure and the wrong
       one here: it turns a living dish into a choropleth. This keeps density as the coding but spends
@@ -276,10 +278,11 @@ function ufind(a) { while (uf[a] !== a) { a = uf[a] = uf[uf[a]]; } return a; }
 // --- division markers (preallocated ring) ---------------------------------
 const MK = 48;
 const mkx = new Float32Array(MK), mky = new Float32Array(MK),
-      mkh = new Float32Array(MK), mka = new Float32Array(MK);
+      mkh = new Float32Array(MK), mka = new Float32Array(MK),
+      mkt = new Uint8Array(MK);         // 0 = division (expands), 1 = death (contracts)
 let mkw = 0;
-function marker(x, y, hue) {
-  mkx[mkw] = x; mky[mkw] = y; mkh[mkw] = hue; mka[mkw] = 1;
+function marker(x, y, hue, type) {
+  mkx[mkw] = x; mky[mkw] = y; mkh[mkw] = hue; mka[mkw] = 1; mkt[mkw] = type || 0;
   mkw = (mkw + 1) % MK;
 }
 
@@ -478,11 +481,15 @@ function cluster() {
     const sibs = kids.get(p);
     if (sibs.length === 1) { cId[ci] = p; continue; }   // same cell, continuing
     if (tick < taintUntil) {
-      // the witness is standing down: largest fragment keeps the name, the
-      // rest are booked as nucleations — an undercount, never an overcount
+      // the witness is standing down: largest fragment keeps the name; the
+      // rest keep the family's hue, root and generation but claim nothing —
+      // no division, no birth, no ring, no minted colour. an undercount,
+      // never an overcount, and no new heredity a hand could have faked
       sibs.sort((a, b) => cSize[b] - cSize[a]);
       if (sibs.indexOf(ci) === 0) { cId[ci] = p; continue; }
-      cId[ci] = newCell(freshHue(), -1, 0); nBirths++; continue;
+      const pk0 = p & MASK;
+      cId[ci] = newCell(cellHue[pk0], cellRoot[pk0], cellGen[pk0]);
+      continue;
     }
     // division: the larger daughter holds the mother line's hue, each bud
     // takes it plus a drift — so a family fans out over its generations
@@ -496,6 +503,27 @@ function cluster() {
     let cy = Math.atan2(cSy[ci] / cSize[ci], cCsy[ci] / cSize[ci]) / ky;
     if (cx < 0) cx += WW; if (cy < 0) cy += WH;
     marker(cx, cy, cellHue[cId[ci] & MASK]);
+  }
+
+  // mergers: a remembered lineage that fed real votes into a surviving
+  // cluster but is claimed by no cluster this epoch was absorbed — its
+  // family ended. mark it with a contracting ring in the absorbed colour,
+  // at the absorber's centroid. suppressed during the stand-down like every
+  // other lineage claim.
+  if (tick >= taintUntil) {
+    const marked = new Set();
+    for (let ci = 0; ci < m; ci++) {
+      if (!alive[ci]) continue;
+      for (const [p, v] of votes[ci]) {
+        if (p === parentOf[ci] || kids.has(p) || marked.has(p)) continue;
+        if (v < Math.max(6, total[ci] * 0.25)) continue;
+        marked.add(p);
+        let cx = Math.atan2(cSx[ci] / cSize[ci], cCsx[ci] / cSize[ci]) / kx;
+        let cy = Math.atan2(cSy[ci] / cSize[ci], cCsy[ci] / cSize[ci]) / ky;
+        if (cx < 0) cx += WW; if (cy < 0) cy += WH;
+        marker(cx, cy, cellHue[p & MASK], 1);
+      }
+    }
   }
 
   // commit membership
@@ -656,14 +684,19 @@ function draw() {
   ctx.globalAlpha = 0.15; ctx.drawImage(b2, 0, 0, W, H);
   ctx.globalAlpha = 1;
 
-  // division rings — the one piece of annotation, and the moment it is about
+  // rings — the only annotation, and the moments it is about: a division ring
+  // expands from the pinch; a death ring contracts in the absorbed family's
+  // colour, so the end of a lineage is as visible as its beginning
   ctx.globalCompositeOperation = 'source-over';
   ctx.lineWidth = 1.2;
   for (let k = 0; k < MK; k++) {
     const a = mka[k];
     if (a <= 0) continue;
-    const rr = (14 + (1 - a) * 26) * (S / 3.2);
-    ctx.strokeStyle = `hsla(${mkh[k]}, 80%, 74%, ${a * 0.5})`;
+    const dying = mkt[k] === 1;
+    const rr = (dying ? 14 + a * 26 : 14 + (1 - a) * 26) * (S / 3.2);
+    ctx.strokeStyle = dying
+      ? `hsla(${mkh[k]}, 55%, 58%, ${a * 0.45})`
+      : `hsla(${mkh[k]}, 80%, 74%, ${a * 0.5})`;
     ctx.beginPath();
     ctx.arc(mkx[k] * S, mky[k] * S, rr, 0, Math.PI * 2);
     ctx.stroke();
@@ -680,9 +713,14 @@ function scatterAll() {
   for (let i = 0; i < N; i++) seedParticle(i, rnd() * WW, rnd() * WH);
   for (let k = 0; k < MK; k++) mka[k] = 0;
   tick = 0; nextId = 0; nSplits = 0; nBirths = 0;
+  taintUntil = -1;   // fresh dish, fresh witness — no leftover stand-down
 }
 function setN(n) {
   n = Math.max(50, Math.min(MAXN, n | 0));
+  // shrinking slices off random indices and can leave two remnant cores of
+  // one cell, which would later count as a real division — stand the witness
+  // down. growth only adds memoryless dust and needs no taint.
+  if (n < N) taintUntil = tick + MEM_TTL;
   for (let i = N; i < n; i++) seedParticle(i, rnd() * WW, rnd() * WH);
   N = n;
   if (sN) { sN.value = N; vN.textContent = N; }
