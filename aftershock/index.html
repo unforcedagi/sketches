@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aftershock</title>
+<style>
+  html, body { margin: 0; min-height: 100%; background: #080708; color: #d9d3ce;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  #wrap { display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 16px; box-sizing: border-box; }
+  #head { width: 700px; max-width: 100%; margin: 2px 0; }
+  h1 { color: #f1e8dd; font-size: 18px; font-weight: 600; letter-spacing: .03em; margin: 0; }
+  #tag { color: #93888a; font-size: 12px; line-height: 1.55; margin: 3px 0 0; }
+  #try { color: #b6aa9e; font-size: 11.5px; line-height: 1.6; margin: 9px 0 0;
+    padding: 5px 10px; border-left: 2px solid #6b3025; border-radius: 0 5px 5px 0;
+    background: rgba(176, 64, 28, .045); }
+  #try .lead, .glabel { color: #685d60; font-size: 10px; letter-spacing: .09em;
+    text-transform: uppercase; }
+  #try .lead { margin-right: 4px; }
+  #try .hot { color: #ee9844; font-weight: 600; }
+  canvas { width: 700px; height: 700px; max-width: 100%; background: #080708;
+    border-radius: 10px; cursor: crosshair; image-rendering: pixelated; touch-action: none; }
+  #controls, #controls2 { display: flex; gap: 10px; align-items: center; justify-content: center;
+    flex-wrap: wrap; max-width: 730px; font-size: 12px; }
+  #controls2 { color: #897f82; font-size: 11.5px; }
+  .grp, label { display: inline-flex; align-items: center; gap: 6px; }
+  button, select { color: #d9d3ce; background: #181317; border: 1px solid #403136;
+    border-radius: 6px; padding: 4px 10px; font: inherit; cursor: pointer; }
+  button:hover { background: #25191c; border-color: #694036; }
+  input[type=range] { width: 92px; accent-color: #d76b30; }
+  #meter { width: 700px; max-width: 100%; height: 24px; display: flex; align-items: center;
+    gap: 9px; color: #756b6e; font-size: 10.5px; }
+  #pulse { height: 2px; flex: 1; position: relative; overflow: hidden; background: #1d171a; }
+  #pulse i { display: block; height: 100%; width: 0; background: linear-gradient(90deg,#76261d,#ffad54,#f8e3ad); }
+  #credit { max-width: 650px; color: #746a6d; font-size: 11px; line-height: 1.65; text-align: center; }
+  #credit code { color: #a38e85; }
+  a { color: #bd7860; }
+  #essay { max-width: 640px; color: #9f9595; font-size: 12.5px; line-height: 1.7;
+    margin-bottom: 25px; }
+  #essay summary { color: #746a6d; cursor: pointer; font-size: 11px; text-align: center; }
+  #essay p { margin: 12px 0; }
+  #essay strong { color: #ded4cf; }
+  #essay em { color: #d68d63; font-style: normal; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header id="head">
+    <h1>Aftershock</h1>
+    <p id="tag">one grain at a time, a quiet surface teaches itself how to fail at every scale.</p>
+    <p id="try"><span class="lead">try this first</span> wait through the small flickers for a large
+      rupture &mdash; the faint red veins are its memory, not the sand itself. Then
+      <span class="hot">press and drag</span> to load a fault of your own.</p>
+  </header>
+  <canvas id="c" width="699" height="699"></canvas>
+  <div id="meter"><span id="status">quiet</span><span id="pulse"><i></i></span><span id="count">0 topplings</span></div>
+  <div id="controls">
+    <span class="grp"><span class="glabel">look</span>
+      <select id="palette"><option value="ember">ember</option><option value="bruise">bruise</option><option value="ash">ash</option></select>
+      <label>memory <input id="memory" type="range" min="930" max="998" value="985"><span id="memoryv">long</span></label>
+    </span>
+    <span class="grp"><span class="glabel">run</span><button id="strike">strike</button><button id="reset">reset</button></span>
+  </div>
+  <div id="controls2">
+    <span class="glabel">tune</span>
+    <label title="how many grains the world receives after each avalanche">pressure
+      <input id="pressure" type="range" min="1" max="32" value="6"><span id="pressurev">6</span></label>
+    <label title="where grains fall: the center, a narrow region, or anywhere">weather
+      <select id="weather"><option value="center">epicentre</option><option value="fault">fault</option><option value="rain">rain</option></select></label>
+  </div>
+  <div id="credit">the Bak&ndash;Tang&ndash;Wiesenfeld sandpile (1987): a cell holding four grains gives
+    one to each neighbour; grains falling off the edge disappear. Nothing chooses the size of the next event.
+    The image shows height dimly and recent topplings brightly · <code>4&rarr;N+E+S+W</code> ·
+    <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
+  <details id="essay">
+    <summary>why this is interesting &mdash; philosophy &middot; technique &middot; aesthetics</summary>
+    <p><strong>Philosophy &mdash; history makes the hazard.</strong> The incoming grain does not contain
+      the energy of the avalanche it triggers. It only finds a surface prepared by every grain before it.
+      A single addition can vanish without consequence or reorganise half the world, and nothing about the
+      addition itself tells you which. Causes look small because the visible cause is merely the last cause.
+      The system keeps the rest of the explanation distributed through its state.</p>
+    <p><strong>Technique &mdash; self-organised criticality.</strong> Every cell follows one rule: below
+      four, hold; at four, give one grain to each cardinal neighbour. Repeating that rule until the grid is
+      stable is an <em>avalanche</em>. Slow driving and open edges pull the pile toward a critical state where
+      there is no characteristic event size: many tiny slips, fewer city-sized ruptures. The order of
+      topplings does not change the final stable surface&mdash;the sandpile is Abelian&mdash;even though the
+      transient path looks violent and contingent. Predictable destination, unpredictable journey.</p>
+    <p><strong>Aesthetics &mdash; draw the verb, not the noun.</strong> A normal sandpile rendering maps
+      zero, one, two, and three grains to four colours. That shows what the object <em>is</em>, but hides what
+      it did. Here the stable heights are almost black. Each topple writes heat into a second field, and that
+      field forgets slowly, leaving overlapping fault lines in ember and violet. A bright cell therefore does
+      not mean &ldquo;more sand.&rdquo; It means &ldquo;this place recently passed something on.&rdquo; The portrait is
+      causal rather than material: a fading map of obligations discharged.</p>
+  </details>
+</div>
+<script src="../lib/gifenc.js"></script>
+<script src="../lib/controls.js"></script>
+<script>
+'use strict';
+
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const S = 233, N = S * S, SCALE = 3;
+const off = document.createElement('canvas'); off.width = S; off.height = S;
+const ox = off.getContext('2d'), image = ox.createImageData(S, S), pixels = image.data;
+const grains = new Uint16Array(N), heat = new Float32Array(N), flash = new Float32Array(N);
+const queue = new Int32Array(N), queued = new Uint8Array(N);
+let qHead = 0, qTail = 0, qCount = 0, currentSize = 0, lastSize = 0, eventNo = 0;
+let decay = .985, pressure = 6, palette = 'ember', dragging = false;
+const status = document.getElementById('status'), count = document.getElementById('count');
+const pulse = document.querySelector('#pulse i');
+
+// A reproducible random source makes the opening composition intentional while
+// every later click still enters through the same grain-addition rule.
+let seed = 0x51f15e;
+function rand() { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) / 4294967296; }
+
+function enqueue(i) {
+  if (grains[i] < 4 || queued[i]) return;
+  queued[i] = 1; queue[qTail] = i; qTail = (qTail + 1) % N; qCount++;
+}
+
+function addAt(x, y, amount) {
+  x = Math.max(1, Math.min(S - 2, x | 0)); y = Math.max(1, Math.min(S - 2, y | 0));
+  const i = y * S + x;
+  grains[i] += amount;
+  enqueue(i);
+}
+
+function loadWorld() {
+  const mode = document.getElementById('weather').value;
+  for (let k = 0; k < pressure; k++) {
+    let x, y;
+    if (mode === 'rain') { x = 4 + rand() * (S - 8); y = 4 + rand() * (S - 8); }
+    else if (mode === 'fault') {
+      x = S * (.2 + rand() * .6); y = S / 2 + Math.sin(x * .075) * S * .08 + (rand() - .5) * 10;
+    } else { x = S / 2 + (rand() - .5) * 7; y = S / 2 + (rand() - .5) * 7; }
+    addAt(x, y, 1);
+  }
+  eventNo++;
+  currentSize = 0;
+}
+
+function resetWorld() {
+  seed = (Math.random() * 0xffffffff) >>> 0;
+  grains.fill(0); heat.fill(0); flash.fill(0); queued.fill(0); qHead = qTail = qCount = 0;
+  // Begin close to, but not at, criticality. The boundary is lighter so it can
+  // act as a sink; the first visible minute completes the organisation.
+  for (let y = 1; y < S - 1; y++) for (let x = 1; x < S - 1; x++) {
+    const t = Math.min(1, Math.min(x, y, S - 1 - x, S - 1 - y) / (S * .18));
+    const p3 = .38 * t, p2 = .36 * t, r = rand();
+    grains[y * S + x] = r < p3 ? 3 : r < p3 + p2 ? 2 : r < p3 + p2 + .2 ? 1 : 0;
+  }
+  addAt(S / 2, S / 2, 32);
+  currentSize = lastSize = 0; eventNo = 1;
+}
+
+function toppleBudget(budget) {
+  let done = 0;
+  while (qCount && done < budget) {
+    const i = queue[qHead]; qHead = (qHead + 1) % N; qCount--; queued[i] = 0;
+    if (grains[i] < 4) continue;
+    const n = Math.floor(grains[i] / 4);
+    grains[i] -= n * 4;
+    heat[i] = Math.min(12, heat[i] + .7 + Math.log2(n + 1));
+    flash[i] = 1;
+    currentSize += n; done++;
+    const x = i % S, y = (i / S) | 0;
+    if (x > 0) { grains[i - 1] += n; enqueue(i - 1); }
+    if (x < S - 1) { grains[i + 1] += n; enqueue(i + 1); }
+    if (y > 0) { grains[i - S] += n; enqueue(i - S); }
+    if (y < S - 1) { grains[i + S] += n; enqueue(i + S); }
+    if (grains[i] >= 4) enqueue(i);
+  }
+  if (!qCount) {
+    if (currentSize) lastSize = currentSize;
+    qHead = qTail = 0;
+    loadWorld();
+  }
+}
+
+function step() {
+  toppleBudget(1800);
+  for (let i = 0; i < N; i++) { heat[i] *= decay; flash[i] *= .72; }
+}
+
+const palettes = {
+  ember: [[8,7,8],[55,15,18],[166,39,18],[246,112,31],[255,221,145]],
+  bruise: [[7,7,11],[29,18,56],[91,43,112],[224,67,77],[255,205,137]],
+  ash: [[9,9,9],[38,36,34],[91,83,74],[192,168,138],[255,242,214]]
+};
+function draw() {
+  const stops = palettes[palette];
+  for (let i = 0, p = 0; i < N; i++, p += 4) {
+    // Log exposure preserves both a world-sized rupture and its hairline aftershocks.
+    const h = Math.log1p(heat[i] * 2.2) / Math.log(27), base = grains[i] * 1.7;
+    const t = Math.max(0, Math.min(.999, Math.pow(h, .68))) * (stops.length - 1);
+    const a = t | 0, mix = t - a, ca = stops[a], cb = stops[a + 1];
+    const glow = flash[i] * 85;
+    pixels[p] = ca[0] + (cb[0] - ca[0]) * mix + base + glow;
+    pixels[p + 1] = ca[1] + (cb[1] - ca[1]) * mix + base * .7 + glow * .75;
+    pixels[p + 2] = ca[2] + (cb[2] - ca[2]) * mix + base * .8 + glow * .35; pixels[p + 3] = 255;
+  }
+  ox.putImageData(image, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(off, 0, 0, cv.width, cv.height);
+  const active = qCount > 0;
+  status.textContent = active ? `rupture ${eventNo}` : 'loading';
+  const n = active ? currentSize : lastSize;
+  count.textContent = `${n.toLocaleString()} topplings`;
+  pulse.style.width = `${Math.min(100, Math.log10(n + 1) * 24)}%`;
+}
+
+function canvasCell(e) {
+  const r = cv.getBoundingClientRect();
+  return [(e.clientX - r.left) / r.width * S, (e.clientY - r.top) / r.height * S];
+}
+function press(e) {
+  const [x, y] = canvasCell(e), radius = e.shiftKey ? 8 : 3;
+  for (let j = -radius; j <= radius; j++) for (let i = -radius; i <= radius; i++)
+    if (i * i + j * j <= radius * radius) addAt(x + i, y + j, 1 + ((radius - Math.hypot(i,j)) / 2 | 0));
+}
+cv.onpointerdown = e => { dragging = true; cv.setPointerCapture(e.pointerId); press(e); };
+cv.onpointermove = e => { if (dragging) press(e); };
+cv.onpointerup = () => { dragging = false; };
+document.getElementById('strike').onclick = () => addAt(S / 2, S / 2, 600);
+document.getElementById('reset').onclick = resetWorld;
+document.getElementById('palette').onchange = e => { palette = e.target.value; };
+document.getElementById('memory').oninput = e => {
+  decay = +e.target.value / 1000;
+  document.getElementById('memoryv').textContent = decay < .955 ? 'brief' : decay < .98 ? 'medium' : decay < .993 ? 'long' : 'geologic';
+};
+document.getElementById('pressure').oninput = e => {
+  pressure = +e.target.value; document.getElementById('pressurev').textContent = pressure;
+};
+
+resetWorld();
+SketchControls.attach({ canvas: cv, step, draw, ticksPerSecond: 30 });
+</script>
+</body>
+</html>
