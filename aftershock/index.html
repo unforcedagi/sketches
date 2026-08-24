@@ -93,7 +93,9 @@
       it did. Here the stable heights are almost black. Each topple writes heat into a second field, and that
       field forgets slowly, leaving overlapping fault lines in ember and violet. A bright cell therefore does
       not mean &ldquo;more sand.&rdquo; It means &ldquo;this place recently passed something on.&rdquo; The portrait is
-      causal rather than material: a fading map of obligations discharged.</p>
+      causal rather than material: a fading map of obligations discharged. The exposure follows the field&rsquo;s
+      own middle and brightest percentiles, so five minutes of accumulated history still reads as relative
+      geology instead of bleaching into one absolute white.</p>
   </details>
 </div>
 <script src="../lib/gifenc.js"></script>
@@ -109,6 +111,8 @@ const grains = new Uint16Array(N), heat = new Float32Array(N), flash = new Float
 const queue = new Int32Array(N), queued = new Uint8Array(N);
 let qHead = 0, qTail = 0, qCount = 0, currentSize = 0, lastSize = 0, eventNo = 0;
 let decay = .985, pressure = 6, palette = 'ember', dragging = false, xray = false, lastPaint = -1;
+let exposureBlack = 0, exposureWhite = 3, exposureClock = 0;
+const exposureBins = new Uint32Array(256);
 const status = document.getElementById('status'), count = document.getElementById('count');
 const pulse = document.querySelector('#pulse i');
 
@@ -155,6 +159,7 @@ function resetWorld() {
   }
   addAt(S / 2, S / 2, 32);
   currentSize = lastSize = 0; eventNo = 1;
+  exposureBlack = 0; exposureWhite = 3; exposureClock = 0;
 }
 
 function toppleBudget(budget) {
@@ -164,7 +169,9 @@ function toppleBudget(budget) {
     if (grains[i] < 4) continue;
     const n = Math.floor(grains[i] / 4);
     grains[i] -= n * 4;
-    heat[i] = Math.min(12, heat[i] + .7 + Math.log2(n + 1));
+    // Do not cap this field: hard clipping eventually erases every difference
+    // between frequently active cells. Exposure, below, handles its dynamic range.
+    heat[i] += .7 + Math.log2(n + 1);
     flash[i] = 1;
     currentSize += n; done++;
     const x = i % S, y = (i / S) | 0;
@@ -184,6 +191,29 @@ function toppleBudget(budget) {
 function step() {
   toppleBudget(1800);
   for (let i = 0; i < N; i++) { heat[i] *= decay; flash[i] *= .72; }
+  if (++exposureClock >= 30) { exposureClock = 0; updateExposure(); }
+}
+
+// Histogram auto-exposure. A mid-field percentile becomes black and the 99th
+// percentile becomes white; exponential smoothing prevents visible pumping.
+// Early on the black point is still zero, preserving isolated hairline events.
+function updateExposure() {
+  exposureBins.fill(0);
+  let peak = .001;
+  for (let i = 0; i < N; i++) if (heat[i] > peak) peak = heat[i];
+  for (let i = 0; i < N; i++) exposureBins[Math.min(255, heat[i] / peak * 255) | 0]++;
+  function percentile(q) {
+    const target = N * q; let seen = 0;
+    for (let b = 0; b < 256; b++) {
+      seen += exposureBins[b];
+      if (seen >= target) return peak * b / 255;
+    }
+    return peak;
+  }
+  const targetBlack = percentile(.45);
+  const targetWhite = Math.max(targetBlack + .05, percentile(.99));
+  exposureBlack += (targetBlack - exposureBlack) * .16;
+  exposureWhite += (targetWhite - exposureWhite) * .16;
 }
 
 const palettes = {
@@ -200,8 +230,10 @@ function draw() {
       continue;
     }
     // Log exposure preserves both a world-sized rupture and its hairline aftershocks.
-    const h = Math.log1p(heat[i] * 2.2) / Math.log(27);
-    const t = Math.max(0, Math.min(.999, Math.pow(h, .68))) * (stops.length - 1);
+    const relative = Math.max(0, (heat[i] - exposureBlack) /
+      Math.max(.05, exposureWhite - exposureBlack));
+    const h = Math.log1p(relative * 5) / Math.log(6);
+    const t = Math.max(0, Math.min(.999, Math.pow(h, .76))) * (stops.length - 1);
     const a = t | 0, mix = t - a, ca = stops[a], cb = stops[a + 1];
     const glow = flash[i] * 85;
     pixels[p] = ca[0] + (cb[0] - ca[0]) * mix + glow;
@@ -213,7 +245,7 @@ function draw() {
   ctx.drawImage(off, 0, 0, cv.width, cv.height);
   const active = qCount > 0;
   status.textContent = active ? `rupture ${eventNo}` : 'loading';
-  const n = active ? currentSize : lastSize;
+  const n = active ? (currentSize || lastSize) : lastSize;
   count.textContent = `${n.toLocaleString()} topplings`;
   pulse.style.width = `${Math.min(100, Math.log10(n + 1) * 24)}%`;
 }
