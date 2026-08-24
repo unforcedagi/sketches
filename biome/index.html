@@ -26,6 +26,7 @@
     font-size: 10px; margin-right: 4px; }
   #try .k-lock { color: #e0c56a; font-weight: 600; }
   #try .k-plant { color: #7fc6a0; font-weight: 600; }
+  #try .k-map { color: #bd8ee8; font-weight: 600; }
   .glabel { font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase;
     color: #575c78; }
   .grp { display: inline-flex; gap: 8px; align-items: center; }
@@ -53,6 +54,7 @@
   body.paper #try .lead { color: #9a8f7c; }
   body.paper #try .k-lock { color: #8a5a22; }
   body.paper #try .k-plant { color: #3d6b52; }
+  body.paper #try .k-map { color: #6b4a8a; }
   body.paper .glabel, body.paper #controls2 { color: #a2977f; }
   body.paper #credit, body.paper #essay summary { color: #8d8272; }
   body.paper #essay { color: #4c443a; }
@@ -69,7 +71,8 @@
     <p id="try"><span class="lead">try this first</span> just watch. The spotted country, the worm
       country and the empty country are the same reaction. Then pull
       <span class="k-lock">one climate</span> all the way up: the geography collapses into a single
-      animal. <span class="k-plant">Drag</span> to plant a seed in a climate that has none.</p>
+      animal. <span class="k-plant">Drag</span> to plant a seed in a climate that has none.
+      Hold <span class="k-map">X</span> to see the climate without the animals.</p>
   </header>
   <canvas id="c" width="768" height="768"></canvas>
   <div id="controls">
@@ -78,12 +81,10 @@
       <select id="pal" title="how the two chemicals are inked">
         <option value="lichen">lichen</option>
         <option value="ink">ink</option>
-        <option value="ember">ember</option>
       </select>
     </span>
     <span class="grp">
       <span class="glabel">run</span>
-      <button id="stir" title="scatter new nuclei without wiping the plate">stir</button>
       <button id="reset" title="fresh seed, same climate map">reset</button>
     </span>
   </div>
@@ -91,8 +92,6 @@
     <span class="glabel">tune</span>
     <label title="0 keeps the whole Pearson corridor as a geography. 1 gives every cell the same feed and kill — one animal, no borders.">one climate
       <input id="lock" type="range" min="0" max="1" step="0.01" value="0"><span id="lockv">atlas</span></label>
-    <label title="slides the feed/kill window along Pearson's pattern corridor. The span stays the same; which animals you get changes.">latitude
-      <input id="lat" type="range" min="-1" max="1" step="0.01" value="0"><span id="latv">0.00</span></label>
   </div>
   <div id="credit">Gray&ndash;Scott reaction&ndash;diffusion
     <code>U + 2V → 3V</code>, feed F and kill k. Textbook applets pick one (F, k) and show one animal.
@@ -121,11 +120,13 @@
       are fields. Default window is F ∈ [0.018, 0.038], k ∈ [0.052, 0.063] &mdash; a rectangle
       chosen by looking, not by formula, because it is the slice where four morphologies and a
       desert all fit on one 192² plate. The gradient has to be slow next to a pattern wavelength
-      or you get soup; 192 cells is just enough for a few spots per climate. <em>Latitude</em>
-      translates that window along the corridor without changing its span.
+      or you get soup; 192 cells is just enough for a few spots per climate.
       <em>One climate</em> interpolates every cell toward the midpoint (F, k), which is how you
       watch an atlas collapse into a specimen. Nuclei are scattered at seed so every climate that
-      can live, does; drag plants more.</p>
+      can live, does; drag plants more. Holding X shows the (F, k) field at full ink &mdash;
+      the climate map as a momentary overlay, not a second live encoding.
+      <code>?lat=</code> slides the window along Pearson's corridor (span unchanged) if you want a
+      different slice; it is not a visible control.</p>
     <p><strong>Aesthetics &mdash; hue is climate, ink is life.</strong> A Gray&ndash;Scott demo
       usually paints V in one ramp, so a spotted world and a worm world look like the same
       substance in different arrangements. Here hue is taken from the cell's own (F, k): sage in
@@ -167,6 +168,7 @@ let pal = 'lichen';
 let lock = 0;
 let lat = 0;
 let dragging = false;
+let xray = false;
 
 function $(id) { return document.getElementById(id); }
 
@@ -210,18 +212,15 @@ function rand() {
   return (seed >>> 0) / 4294967296;
 }
 
-function seedPlate(full) {
-  if (full) {
-    U.fill(1);
-    V.fill(0);
-    seed = (Math.random() * 0xffffffff) >>> 0;
-  }
+function seedPlate() {
+  U.fill(1);
+  V.fill(0);
+  seed = (Math.random() * 0xffffffff) >>> 0;
   for (let i = 0; i < N * N; i++) {
     V[i] += 0.02 * rand();
     U[i] -= 0.02 * rand();
   }
-  const nBlobs = full ? 36 : 12;
-  for (let b = 0; b < nBlobs; b++) {
+  for (let b = 0; b < 36; b++) {
     blob(4 + (rand() * (N - 8)) | 0, 4 + (rand() * (N - 8)) | 0, 3 + (rand() * 5) | 0);
   }
 }
@@ -257,37 +256,45 @@ function step() {
 
 function lerp(a, b, t) { return a + (b - a) * t; }
 
+function climateTint(fn, kn) {
+  const sageR = 86, sageG = 168, sageB = 132;
+  const goldR = 236, goldG = 194, goldB = 86;
+  const boneR = 232, boneG = 220, boneB = 198;
+  const corR = 228, corG = 108, corB = 82;
+  return [
+    lerp(lerp(sageR, goldR, fn), lerp(boneR, corR, fn), kn),
+    lerp(lerp(sageG, goldG, fn), lerp(boneG, corG, fn), kn),
+    lerp(lerp(sageB, goldB, fn), lerp(boneB, corB, fn), kn),
+  ];
+}
+
 function draw() {
   const f0 = F0 + lat * 0.006, k0 = K0 + lat * 0.004;
   for (let i = 0, p = 0; i < N * N; i++, p += 4) {
-    const v = V[i];
-    // Floor sits above the trivial V=0 desert and clips some of the smoother
-    // homogeneous V*. Remaining glow in the empty corner is that state, not a wash.
-    let ink = (v - 0.16) / 0.30;
-    if (ink < 0) ink = 0; else if (ink > 1) ink = 1;
-    ink = Math.pow(ink, 0.62);
     const fn = (Ff[i] - f0) / SPAN_F;
     const kn = (Kk[i] - k0) / SPAN_K;
     let r, g, b;
-    if (pal === 'ink') {
-      r = lerp(245, 42, ink);
-      g = lerp(239, 28, ink);
-      b = lerp(226, 18, ink);
-    } else if (pal === 'ember') {
-      r = lerp(8, lerp(lerp(255, 236, fn), 255, kn), ink);
-      g = lerp(6, lerp(lerp(80, 170, fn), 90, kn), ink);
-      b = lerp(10, lerp(lerp(40, 60, fn), 50, kn), ink);
+    if (xray) {
+      // climate at full ink — animals vanish, geography remains
+      const t = climateTint(fn, kn);
+      r = t[0]; g = t[1]; b = t[2];
     } else {
-      const sageR = 86, sageG = 168, sageB = 132;
-      const goldR = 236, goldG = 194, goldB = 86;
-      const boneR = 232, boneG = 220, boneB = 198;
-      const corR = 228, corG = 108, corB = 82;
-      const tR = lerp(lerp(sageR, goldR, fn), lerp(boneR, corR, fn), kn);
-      const tG = lerp(lerp(sageG, goldG, fn), lerp(boneG, corG, fn), kn);
-      const tB = lerp(lerp(sageB, goldB, fn), lerp(boneB, corB, fn), kn);
-      r = lerp(5, tR, ink);
-      g = lerp(8, tG, ink);
-      b = lerp(12, tB, ink);
+      const v = V[i];
+      // Floor sits above the trivial V=0 desert and clips some of the smoother
+      // homogeneous V*. Remaining glow in the empty corner is that state, not a wash.
+      let ink = (v - 0.16) / 0.30;
+      if (ink < 0) ink = 0; else if (ink > 1) ink = 1;
+      ink = Math.pow(ink, 0.62);
+      if (pal === 'ink') {
+        r = lerp(245, 42, ink);
+        g = lerp(239, 28, ink);
+        b = lerp(226, 18, ink);
+      } else {
+        const t = climateTint(fn, kn);
+        r = lerp(5, t[0], ink);
+        g = lerp(8, t[1], ink);
+        b = lerp(12, t[2], ink);
+      }
     }
     px[p] = r; px[p + 1] = g; px[p + 2] = b; px[p + 3] = 255;
   }
@@ -330,6 +337,9 @@ cv.onpointermove = e => {
   plantAt(x, y, 3);
 };
 cv.onpointerup = () => { dragging = false; };
+document.addEventListener('keydown', e => { if (e.key.toLowerCase() === 'x') xray = true; });
+document.addEventListener('keyup', e => { if (e.key.toLowerCase() === 'x') xray = false; });
+window.addEventListener('blur', () => { xray = false; });
 
 $('pal').onchange = e => {
   pal = e.target.value;
@@ -340,25 +350,26 @@ $('lock').oninput = e => {
   $('lockv').textContent = lock < 0.03 ? 'atlas' : lock > 0.97 ? 'one' : lock.toFixed(2);
   climate();
 };
-$('lat').oninput = e => {
-  lat = +e.target.value;
-  $('latv').textContent = lat.toFixed(2);
-  climate();
-};
-$('stir').onclick = () => seedPlate(false);
-$('reset').onclick = () => boot(true);
+$('reset').onclick = () => boot();
+
+(function readQuery() {
+  const q = new URLSearchParams(location.search);
+  if (!q.has('lat')) return;
+  const n = +q.get('lat');
+  if (isFinite(n)) lat = Math.max(-1, Math.min(1, n));
+})();
 
 let attached = false;
-function boot(full) {
+function boot() {
   climate();
-  seedPlate(full);
+  seedPlate();
   for (let t = 0; t < BOOT; t++) react();
   if (!attached) {
     attached = true;
     SketchControls.attach({ canvas: cv, step, draw, ticksPerSecond: 30 });
   }
 }
-boot(true);
+boot();
 </script>
 </body>
 </html>
