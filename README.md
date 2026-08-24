@@ -12,3 +12,4 @@ Small algorithmic-art sketches. Served at https://unforcedagi.github.io/sketches
 - [chimera](chimera/) — 700 identical ring oscillators splitting into a locked arc and a drifting one (Abrams–Strogatz)
 - [desire-paths](desire-paths/) — active-walker trail model (Helbing 1997): road networks worn into the ground by nobody in particular
 - [biome](biome/) — Gray–Scott as a geography of climates: one plate, many animals (Pearson 1993 map made flesh)
+- [chladni](chladni/) — dust settles where the plate is still; two notes at once, the figure is the silence they share

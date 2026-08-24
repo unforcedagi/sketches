@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chladni</title>
+<style>
+  html, body { margin: 0; min-height: 100%; background: #100e0c; color: #d4cfc6;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  #wrap { display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 16px; box-sizing: border-box; }
+  canvas { background: #100e0c; border-radius: 10px; max-width: 100%;
+    cursor: crosshair; image-rendering: pixelated; touch-action: none; }
+  #controls, #controls2 { display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    justify-content: center; font-size: 12.5px; max-width: 780px; }
+  #controls2 { font-size: 11.5px; color: #8a8378; }
+  label { display: flex; gap: 6px; align-items: center; }
+  #head { width: 768px; max-width: 100%; margin: 2px 0 2px; }
+  #head h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.02em;
+    margin: 0; color: #efe8dc; }
+  #tag { font-size: 12px; color: #8f877c; margin: 3px 0 0; line-height: 1.55; }
+  #try { font-size: 11.5px; color: #b7b09f; margin: 9px 0 0; line-height: 1.6;
+    border-left: 2px solid #6a5a3a; background: rgba(200, 170, 90, 0.05);
+    padding: 5px 10px; border-radius: 0 5px 5px 0; }
+  #try .lead { color: #6f675c; text-transform: uppercase; letter-spacing: 0.09em;
+    font-size: 10px; margin-right: 4px; }
+  #try .k-one { color: #e0c56a; font-weight: 600; }
+  #try .k-sound { color: #7fc6a0; font-weight: 600; }
+  #try .k-map { color: #bd8ee8; font-weight: 600; }
+  .glabel { font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase;
+    color: #5c564c; }
+  .grp { display: inline-flex; gap: 8px; align-items: center; }
+  input[type=range] { width: 96px; accent-color: #c9b48a; }
+  button { background: #1a1714; color: #d4cfc6; border: 1px solid #3a342c;
+    border-radius: 6px; padding: 4px 11px; font: inherit; cursor: pointer; }
+  button:hover { background: #26221c; }
+  button.on { background: #2a2620; border-color: #c9b48a; color: #efe8dc; }
+  select { background: #1a1714; color: #d4cfc6; border: 1px solid #3a342c;
+    border-radius: 6px; padding: 3px 6px; font: inherit; }
+  #credit { font-size: 11px; color: #746d62; max-width: 700px; text-align: center;
+    line-height: 1.65; }
+  a { color: #c4a574; }
+  #essay { max-width: 660px; font-size: 12.5px; line-height: 1.7; color: #9a9286;
+    margin-bottom: 26px; }
+  #essay summary { cursor: pointer; color: #746d62; font-size: 11px; text-align: center; }
+  #essay p { margin: 12px 0; }
+  #essay strong { color: #e4ddd0; }
+  #essay em { color: #c2b394; font-style: normal; }
+  body.paper { background: #f3eee4; color: #2c261f; }
+  body.paper canvas { background: #faf7f0; }
+  body.paper button, body.paper select { background: #ebe5d8; color: #2c261f; border-color: #c9bfae; }
+  body.paper button.on { background: #ddd4c2; border-color: #8a5a22; }
+  body.paper #head h1 { color: #241e17; }
+  body.paper #tag { color: #7d7365; }
+  body.paper #try { color: #4c443a; border-left-color: #c1b49c; background: rgba(120,96,60,0.07); }
+  body.paper #try .lead { color: #9a8f7c; }
+  body.paper #try .k-one { color: #8a5a22; }
+  body.paper #try .k-sound { color: #3d6b52; }
+  body.paper #try .k-map { color: #6b4a8a; }
+  body.paper .glabel, body.paper #controls2 { color: #a2977f; }
+  body.paper #credit, body.paper #essay summary { color: #8d8272; }
+  body.paper #essay { color: #4c443a; }
+  body.paper #essay strong { color: #241e17; }
+  body.paper a { color: #7a5c33; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header id="head">
+    <h1>Chladni</h1>
+    <p id="tag">dust settles where the plate is still. two notes at once, not a textbook eigenmode
+      &mdash; the figure is the silence they share.</p>
+    <p id="try"><span class="lead">try this first</span> just watch the salt find the quiet. Then pull
+      <span class="k-one">one note</span> all the way up: the chord collapses to a textbook figure.
+      Turn <span class="k-sound">sound</span> on &mdash; what you hear is the plate; the figure is
+      what it isn&rsquo;t. Drag to sprinkle. Hold <span class="k-map">X</span> to see the vibration.</p>
+  </header>
+  <canvas id="c" width="768" height="768"></canvas>
+  <div id="controls">
+    <span class="grp">
+      <span class="glabel">look</span>
+      <select id="pal" title="salt on iron, or a lithograph">
+        <option value="salt">salt</option>
+        <option value="ink">ink</option>
+      </select>
+      <button id="sound" title="two sines at the chord's frequency ratio. off until you ask — browsers block autoplay.">sound</button>
+    </span>
+    <span class="grp">
+      <span class="glabel">run</span>
+      <button id="reset" title="throw the salt again">reset</button>
+    </span>
+  </div>
+  <div id="controls2">
+    <span class="glabel">tune</span>
+    <label title="0 is two notes. 1 silences the second, leaving a textbook Chladni figure of the lower mode.">one note
+      <input id="lock" type="range" min="0" max="1" step="0.01" value="0"><span id="lockv">chord</span></label>
+    <label title="which two square-plate modes are sounded. the named interval is their Kirchhoff frequency ratio, not a temperament.">interval
+      <select id="chord">
+        <option value="fifth">fifth</option>
+        <option value="octave">octave</option>
+        <option value="fourth">fourth</option>
+        <option value="tritone">tritone</option>
+      </select>
+    </label>
+  </div>
+  <div id="credit">Chladni figures, 1787: sand on a bowed plate collects at the nodal lines.
+    Square-plate modes after Wheatstone, cosine sum and difference,
+    <code>ψ<sup>±</sup><sub>mn</sub> = cos(mπx)cos(nπy) ± cos(nπx)cos(mπy)</code>,
+    with <code>ω ∝ m²+n²</code>. Default is (4,1)<sup>−</sup>+(4,3)<sup>+</sup> so the chord rings
+    the diagonal a single note would leave still. Ratio 25/17 sits 34 cents flat of a
+    just fifth &middot;
+    <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
+  <details id="essay">
+    <summary>why this is interesting &mdash; philosophy &middot; technique &middot; aesthetics</summary>
+    <p><strong>Philosophy &mdash; the figure is the silence.</strong>
+      Ernst Chladni covered a metal plate with sand and bowed it. The sand did not paint the
+      vibration. It painted the places that refused to vibrate. A note is a motion; its portrait
+      is the motionless set. Textbook applets pick one eigenmode and stop there, as if a plate
+      had only one thing to say. Two notes at once, and the figure is not the sum of two drawings
+      but the silence they share: grains pile brightest where <em>both</em> modes are still, dimmer
+      along the private nodes of each. Opposite parity puts the diagonal at a node of one note and
+      an antinode of the other, so a chord refuses the textbook X. Pull <em>one note</em> and the
+      diagonal comes back. That is the plate agreeing to be a specimen.</p>
+    <p><strong>Technique &mdash; two modes, not a wave grid.</strong>
+      This is not a discretized wave equation. The plate is Wheatstone&rsquo;s closed-form square
+      figures, cosine sum and difference, with Kirchhoff frequencies <code>ω ∝ m² + n²</code>.
+      Default pair (4,1)<sup>−</sup> and (4,3)<sup>+</sup>: opposite parity, so the diagonal is a
+      node of one note and an antinode of the other. Ratio 25/17 ≈ 1.471, a fifth 34 cents flat of
+      just 3/2. Octave, fourth and tritone are other pairs from the same family, always with the
+      lower Kirchhoff number as A so <em>one note</em> drops the higher pitch
+      (fourth is (3,2)<sup>−</sup>+(4,1)<sup>+</sup> at 17/13; tritone is
+      (5,2)<sup>−</sup>+(5,4)<sup>+</sup> at 41/29, half a cent from √2).
+      Sixteen thousand grains hop when instantaneous |z| exceeds a threshold and then walk downhill
+      of the time-averaged energy
+      <code>½(A²ψ<sub>A</sub>² + B²ψ<sub>B</sub>²)</code>.
+      Shared nodes never hop. Changing interval or <em>one note</em> stirs the salt for three seconds
+      so a new silence can be found; between interventions the figure holds.
+      A single note is one constraint, a corridor rather than an intersection, so the quiet
+      threshold scales with the slider (<code>TH·(1 − 0.75·lock)</code>) and the specimen
+      tightens toward a hairline while the chord stays untouched.
+      <em>One note</em> fades B&rsquo;s amplitude to zero, which is how you
+      watch a chord collapse into a specimen. Sound, if you ask for it, is two sines at 196 Hz
+      times that ratio &mdash; G3 and (for the fifth) almost D4. Browsers block autoplay; the
+      button is the gesture.</p>
+    <p><strong>Aesthetics &mdash; presence is the drawing.</strong>
+      Hue is not carrying a parameter this time. The figure is where the grains are, and the
+      antinodes are empty on purpose. Salt on iron, nearest-neighbour upscale, the grain is the
+      pixel. Switch to <em>ink</em> and the same silence becomes a lithograph. Hold X for the
+      signed plate &mdash; the thing the dust is fleeing, the sound as a picture. That overlay is
+      momentary on purpose: the default frame stays the quiet.</p>
+  </details>
+</div>
+<script src="../lib/gifenc.js"></script>
+<script src="../lib/controls.js"></script>
+<script>
+'use strict';
+
+const G = 192;
+const P = 16000;
+const BOOT = 24;
+const TH = 0.055;
+const HOP = 1.05;
+const AGITATE = 90; // 3 s at 30 Hz; long-jumps only inside this window
+const F0 = 196; // G3; visual Hz is independent and slower
+const VIS_HZ = 1.7;
+
+const CHORDS = {
+  // s = −1 difference (diagonal is a node), +1 sum (diagonal rings).
+  // Mixing parities is the point: the chord agitates the diagonal; one note restores it.
+  fifth:   { mA: 4, nA: 1, sA: -1, mB: 4, nB: 3, sB: +1 }, // 25/17 ≈ 3:2, 34¢ flat
+  octave:  { mA: 2, nA: 1, sA: -1, mB: 3, nB: 1, sB: +1 }, // 10/5  = 2
+  fourth:  { mA: 3, nA: 2, sA: -1, mB: 4, nB: 1, sB: +1 }, // 17/13 ≈ 4:3, 34¢ flat
+  tritone: { mA: 5, nA: 2, sA: -1, mB: 5, nB: 4, sB: +1 }, // 41/29 ≈ √2
+};
+
+const psiA = new Float32Array(G * G);
+const psiB = new Float32Array(G * G);
+const E    = new Float32Array(G * G);
+const dens = new Uint16Array(G * G);
+const pxp  = new Float32Array(P);
+const pyp  = new Float32Array(P);
+
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+const off = document.createElement('canvas');
+off.width = G; off.height = G;
+const ox = off.getContext('2d');
+const img = ox.createImageData(G, G);
+const pix = img.data;
+
+let pal = 'salt';
+let lock = 0;
+let chord = 'fifth';
+let mixA = 1, mixB = 1;
+let phA = 0, phB = 0, dphA = 0, dphB = 0, sA = 0, sB = 0;
+let omegaA = 5, omegaB = 25;
+let dragging = false;
+let xray = false;
+let soundOn = false;
+let audio = null;
+let agitate = 0;
+
+function stir() { agitate = AGITATE; }
+
+let seed = 0xC0FFEE;
+function rand() {
+  seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5;
+  return (seed >>> 0) / 4294967296;
+}
+
+function $(id) { return document.getElementById(id); }
+
+function fillMode(out, m, n, sign) {
+  let max = 0;
+  for (let y = 0; y < G; y++) {
+    const v = y / (G - 1);
+    const cMv = Math.cos(m * Math.PI * v);
+    const cNv = Math.cos(n * Math.PI * v);
+    for (let x = 0; x < G; x++) {
+      const u = x / (G - 1);
+      const w = Math.cos(m * Math.PI * u) * cNv + sign * Math.cos(n * Math.PI * u) * cMv;
+      out[y * G + x] = w;
+      const a = w < 0 ? -w : w;
+      if (a > max) max = a;
+    }
+  }
+  if (max > 0) {
+    const inv = 1 / max;
+    for (let i = 0; i < G * G; i++) out[i] *= inv;
+  }
+}
+
+function recomputeE() {
+  mixA = 1;
+  mixB = 1 - lock;
+  for (let i = 0; i < G * G; i++) {
+    const A = mixA * psiA[i], B = mixB * psiB[i];
+    E[i] = A * A + B * B;
+  }
+}
+
+function setChord(name) {
+  chord = name;
+  const c = CHORDS[name];
+  fillMode(psiA, c.mA, c.nA, c.sA);
+  fillMode(psiB, c.mB, c.nB, c.sB);
+  omegaA = c.mA * c.mA + c.nA * c.nA;
+  omegaB = c.mB * c.mB + c.nB * c.nB;
+  const ratio = omegaB / omegaA;
+  dphA = 2 * Math.PI * VIS_HZ / 30;
+  dphB = 2 * Math.PI * VIS_HZ * ratio / 30;
+  recomputeE();
+  tuneAudio();
+  stir();
+}
+
+function scatter() {
+  seed = (Math.random() * 0xffffffff) >>> 0;
+  for (let p = 0; p < P; p++) {
+    pxp[p] = 1 + rand() * (G - 3);
+    pyp[p] = 1 + rand() * (G - 3);
+  }
+}
+
+function sprinkle(cx, cy) {
+  for (let k = 0; k < 90; k++) {
+    const p = (rand() * P) | 0;
+    const a = rand() * Math.PI * 2;
+    const r = rand() * 6;
+    let x = cx + Math.cos(a) * r;
+    let y = cy + Math.sin(a) * r;
+    if (x < 1) x = 1; else if (x > G - 2) x = G - 2;
+    if (y < 1) y = 1; else if (y > G - 2) y = G - 2;
+    pxp[p] = x; pyp[p] = y;
+  }
+}
+
+function step() {
+  sA = Math.sin(phA);
+  sB = Math.sin(phB);
+  phA += dphA;
+  phB += dphB;
+  const th = TH * (1 - 0.75 * lock);
+  const hop = HOP;
+  const jumping = agitate > 0;
+  for (let p = 0; p < P; p++) {
+    let x = pxp[p], y = pyp[p];
+    let ix = x | 0, iy = y | 0;
+    if (ix < 1) ix = 1; else if (ix > G - 2) ix = G - 2;
+    if (iy < 1) iy = 1; else if (iy > G - 2) iy = G - 2;
+    const i = iy * G + ix;
+    const z = mixA * psiA[i] * sA + mixB * psiB[i] * sB;
+    if (z * z > th) {
+      const gx = E[i + 1] - E[i - 1];
+      const gy = E[i + G] - E[i - G];
+      const n = Math.hypot(gx, gy) + 1e-6;
+      x -= hop * gx / n + (rand() - 0.5) * 0.7;
+      y -= hop * gy / n + (rand() - 0.5) * 0.7;
+    } else {
+      x += (rand() - 0.5) * 0.05;
+      y += (rand() - 0.5) * 0.05;
+      // long-jump only while the plate is finding a new silence
+      if (jumping && rand() < 0.04) {
+        x += (rand() - 0.5) * 10;
+        y += (rand() - 0.5) * 10;
+      }
+    }
+    if (x < 1) x = 1; else if (x > G - 2) x = G - 2;
+    if (y < 1) y = 1; else if (y > G - 2) y = G - 2;
+    pxp[p] = x; pyp[p] = y;
+  }
+  if (agitate > 0) agitate--;
+}
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function draw() {
+  dens.fill(0);
+  if (!xray) {
+    for (let p = 0; p < P; p++) {
+      dens[(pyp[p] | 0) * G + (pxp[p] | 0)]++;
+    }
+  }
+  const inkMode = pal === 'ink';
+  for (let i = 0, q = 0; i < G * G; i++, q += 4) {
+    let r, g, b;
+    if (xray) {
+      const z = mixA * psiA[i] * sA + mixB * psiB[i] * sB;
+      const t = z * 0.5 + 0.5;
+      if (inkMode) {
+        r = lerp(210, 48, t);
+        g = lerp(200, 36, t);
+        b = lerp(184, 28, t);
+      } else {
+        r = lerp(28, 220, t);
+        g = lerp(36, 198, t);
+        b = lerp(48, 150, t);
+      }
+    } else {
+      let ink = dens[i] / 7;
+      if (ink > 1) ink = 1;
+      ink = Math.pow(ink, 0.72);
+      if (inkMode) {
+        r = lerp(245, 42, ink);
+        g = lerp(239, 28, ink);
+        b = lerp(226, 18, ink);
+      } else {
+        r = lerp(14, 236, ink);
+        g = lerp(12, 226, ink);
+        b = lerp(10, 204, ink);
+      }
+    }
+    pix[q] = r; pix[q + 1] = g; pix[q + 2] = b; pix[q + 3] = 255;
+  }
+  ox.putImageData(img, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(off, 0, 0, cv.width, cv.height);
+}
+
+function canvasCell(e) {
+  const r = cv.getBoundingClientRect();
+  return [
+    (e.clientX - r.left) / r.width * G,
+    (e.clientY - r.top) / r.height * G
+  ];
+}
+
+cv.onpointerdown = e => {
+  dragging = true;
+  cv.setPointerCapture(e.pointerId);
+  const [x, y] = canvasCell(e);
+  sprinkle(x, y);
+};
+cv.onpointermove = e => {
+  if (!dragging) return;
+  const [x, y] = canvasCell(e);
+  sprinkle(x, y);
+};
+cv.onpointerup = () => { dragging = false; };
+document.addEventListener('keydown', e => { if (e.key.toLowerCase() === 'x') xray = true; });
+document.addEventListener('keyup', e => { if (e.key.toLowerCase() === 'x') xray = false; });
+window.addEventListener('blur', () => { xray = false; });
+
+$('pal').onchange = e => {
+  pal = e.target.value;
+  document.body.classList.toggle('paper', pal === 'ink');
+};
+$('lock').oninput = e => {
+  lock = +e.target.value;
+  $('lockv').textContent = lock < 0.03 ? 'chord' : lock > 0.97 ? 'one' : lock.toFixed(2);
+  recomputeE();
+  tuneAudio();
+  stir();
+};
+$('chord').onchange = e => setChord(e.target.value);
+$('reset').onclick = () => { scatter(); };
+
+function tuneAudio() {
+  if (!audio) return;
+  const lo = Math.min(omegaA, omegaB);
+  const now = audio.ctx.currentTime;
+  audio.oA.frequency.setTargetAtTime(F0 * omegaA / lo, now, 0.04);
+  audio.oB.frequency.setTargetAtTime(F0 * omegaB / lo, now, 0.04);
+  audio.gA.gain.setTargetAtTime(soundOn ? 0.07 : 0, now, 0.05);
+  audio.gB.gain.setTargetAtTime(soundOn ? 0.07 * mixB : 0, now, 0.05);
+}
+
+function ensureAudio() {
+  if (audio) return audio;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  const actx = new AC();
+  const oA = actx.createOscillator();
+  const oB = actx.createOscillator();
+  const gA = actx.createGain();
+  const gB = actx.createGain();
+  const master = actx.createGain();
+  oA.type = 'sine'; oB.type = 'sine';
+  gA.gain.value = 0; gB.gain.value = 0;
+  master.gain.value = 1;
+  oA.connect(gA).connect(master);
+  oB.connect(gB).connect(master);
+  master.connect(actx.destination);
+  oA.start(); oB.start();
+  audio = { ctx: actx, oA, oB, gA, gB };
+  return audio;
+}
+
+$('sound').onclick = () => {
+  if (!soundOn) {
+    const a = ensureAudio();
+    if (!a) return;
+    if (a.ctx.state === 'suspended') a.ctx.resume();
+    soundOn = true;
+    $('sound').classList.add('on');
+    $('sound').textContent = 'mute';
+  } else {
+    soundOn = false;
+    $('sound').classList.remove('on');
+    $('sound').textContent = 'sound';
+  }
+  tuneAudio();
+};
+
+let attached = false;
+function boot() {
+  setChord(chord);
+  scatter();
+  agitate = 0; // scatter already seeds; don't keep jumping on first watch
+  for (let t = 0; t < BOOT; t++) step();
+  if (!attached) {
+    attached = true;
+    SketchControls.attach({ canvas: cv, step, draw, ticksPerSecond: 30 });
+  }
+}
+boot();
+</script>
+</body>
+</html>
