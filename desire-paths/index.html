@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desire Paths</title>
+<style>
+  html, body { margin: 0; min-height: 100%; background: #07090c; color: #cdd4da;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  #wrap { display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 16px; box-sizing: border-box; }
+  canvas { background: #07090c; border-radius: 10px; max-width: 100%;
+    cursor: crosshair; touch-action: none; }
+  #controls, #controls2 { display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+    justify-content: center; font-size: 12.5px; max-width: 800px; }
+  #controls2 { font-size: 11.5px; color: #8d9299; }
+  label { display: flex; gap: 6px; align-items: center; }
+  /* header: what this is, in one breath */
+  #head { width: 800px; max-width: 100%; margin: 2px 0 2px; }
+  #head h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.02em;
+    margin: 0; color: #ecdfcd; }
+  #tag { font-size: 12px; color: #8d9299; margin: 3px 0 0; line-height: 1.55; }
+  #try { font-size: 11.5px; color: #b6bcc2; margin: 9px 0 0; line-height: 1.6;
+    border-left: 2px solid #6b4a22; background: rgba(255, 186, 106, 0.055);
+    padding: 5px 10px; border-radius: 0 5px 5px 0; }
+  #try .lead { color: #85705a; text-transform: uppercase; letter-spacing: 0.09em;
+    font-size: 10px; margin-right: 4px; }
+  #try .k-town { color: #ffcb7a; font-weight: 600; }
+  #try .k-pull { color: #7fc6c0; font-weight: 600; }
+  /* faint group labels so the control strip reads in chunks */
+  .glabel { font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase;
+    color: #6a6f76; }
+  .grp { display: inline-flex; gap: 8px; align-items: center; }
+  input[type=range] { width: 96px; accent-color: #e79a3c; }
+  #controls input[type=range] { width: 78px; }
+  button { background: #181d23; color: #cdd4da; border: 1px solid #333c45;
+    border-radius: 6px; padding: 4px 12px; font: inherit; cursor: pointer; }
+  button:hover { background: #222932; }
+  #credit { font-size: 11px; color: #7c828a; max-width: 720px; text-align: center;
+    line-height: 1.65; }
+  a { color: #e7a24c; }
+  #essay { max-width: 660px; font-size: 12.5px; line-height: 1.7; color: #9aa1a8;
+    margin-bottom: 26px; }
+  #essay summary { cursor: pointer; color: #7c828a; font-size: 11px; text-align: center; }
+  #essay p { margin: 12px 0; }
+  #essay strong { color: #ded3c4; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header id="head">
+    <h1>Desire paths</h1>
+    <p id="tag">nobody draws the roads. walkers prefer ground that has already been walked, worn
+      ground heals when nobody uses it, and a road network precipitates out of the difference.</p>
+    <p id="try"><span class="lead">try this first</span> just watch for a few seconds &mdash; the
+      network is already breathing. Then <strong>drag a <span class="k-town">town</span></strong>
+      across the field: its old roads fade to ghosts while new ones cut in. Click empty ground to
+      found a town, double-click one to abandon it. Then pull <span class="k-pull">comfort pull</span>
+      to 0 (everyone beelines, the map dies) and up past 1.2 (everyone funnels onto one highway).</p>
+  </header>
+  <canvas id="c" width="800" height="600"></canvas>
+  <div id="controls">
+    <span class="grp">
+      <span class="glabel">flow</span>
+      <label>walkers <input id="s-nw" type="range" min="40" max="700" step="10" value="380"><span id="v-nw">380</span></label>
+    </span>
+    <span class="grp">
+      <span class="glabel">run</span>
+      <button id="reroll">new layout</button>
+      <button id="clear">clear paths</button>
+    </span>
+  </div>
+  <div id="controls2">
+    <span class="grp">
+      <span class="glabel">tune</span>
+      <label>comfort pull <input id="s-pull" type="range" min="0" max="2" step="0.01" value="1.35"><span id="v-pull">1.35</span></label>
+      <label>wear <input id="s-wear" type="range" min="0" max="60" step="1" value="8"><span id="v-wear">0.008</span></label>
+      <label>healing <input id="s-heal" type="range" min="0" max="200" step="1" value="55"><span id="v-heal">0.00055</span></label>
+    </span>
+  </div>
+  <div id="credit">the active-walker trail model of Helbing, Keltsch &amp; Moln&aacute;r
+    (<em>Modelling the evolution of human trail systems</em>, Nature 388, 1997): each walker steers
+    by <code>beeline&nbsp;+&nbsp;pull&nbsp;&times;&nbsp;&nabla;comfort</code>, wears the ground it
+    treads (with saturation), and the ground heals everywhere at a constant rate &middot;
+    <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
+  <details id="essay">
+    <summary>why this is interesting &mdash; philosophy &middot; technique &middot; aesthetics</summary>
+    <p><strong>Philosophy &mdash; the ground remembers.</strong> A desire path is the line worn into
+      a lawn between where the paving is and where people actually want to go. Planners call them
+      cowpaths, or erosion, or vandalism; some universities now lay no paths at all for the first
+      year and pave whatever the students wear in. What is interesting is not that people
+      disobey &mdash; it is that <em>nobody chose the shape</em>. No walker here has a map, a
+      memory, or an opinion about roads. Each one only wants to get from A to B and slightly
+      prefers ground that is already easy. The network on screen is not a plan anyone had; it is
+      the field's memory of everyone's journeys, and it is legible &mdash; you can read the traffic
+      matrix off it, which pairs of towns matter, which junction is load-bearing. Paths make
+      walkers, and walkers make paths: the causation runs both ways, which is exactly why the
+      result is neither designed nor random. Move a town and watch the argument replay: the old
+      roads do not get deleted, they get <em>forgotten</em>, and for a while the map holds both the
+      city that was and the city that is.</p>
+    <p><strong>Technique &mdash; positive feedback, saturation, decay.</strong> Three ingredients
+      and there is no fourth. <em>Feedback</em>: walking a cell raises its comfort, and comfort
+      attracts walkers. <em>Saturation</em>: wear is applied as <code>+w&nbsp;&times;&nbsp;(1&nbsp;&minus;&nbsp;G)</code>,
+      so ground already bare cannot get more bare &mdash; without this the busiest road would run
+      away to infinity and every other route would be invisible beside it. <em>Decay</em>: comfort
+      leaks away everywhere at a fixed rate, which is what makes a route have to keep earning its
+      existence. The whole character of the thing lives in one number. The desired direction is the
+      unit beeline to the goal plus <em>comfort&nbsp;pull</em> times the gradient of comfort, sampled
+      through a blur &mdash; the blur is the walker's eyesight, the radius at which a track becomes
+      visible as a track. At pull 0 the walkers are ideal commuters, every trip a straight line, and
+      the field is just an X-ray of the traffic. Turn it up and the straight lines start bending
+      toward each other, meeting, and merging: the network buys shared infrastructure by spending
+      detour. Too far up and the detour is unlimited &mdash; everything collapses onto one
+      superhighway that visits every town in turn, which is efficient for the ground and terrible
+      for the walkers. The classic desire-path network, with its triangular shortcuts and its
+      slightly-too-long gentle curves, is the narrow band in between, and it is a compromise nobody
+      negotiated.</p>
+    <p><strong>Aesthetics &mdash; wear as light.</strong> The obvious rendering is a dirt map: brown
+      lines on green. It is honest and it is dead, because it shows you where the ground is
+      <em>damaged</em>. This is dusk from a few hundred metres up instead, and wear is drawn as
+      light laid down by use &mdash; the brighter the road, the more feet have passed. That is a
+      claim, not a fact: nothing here glows, the glow is a colour ramp plus two blur passes. But it
+      is the right claim, because a desire path really is an accumulation, the visible residue of
+      thousands of small private decisions, and light is what accumulation looks like. The ground is
+      kept nearly black and faintly mottled rather than flat, so that the faintest half-abandoned
+      trace still has something to be faint <em>against</em>; the towns are given halos rather than
+      icons, so they read as places with gravity rather than as nodes in a graph; and the walkers
+      are small enough that you lose individuals and see flow. Watch a ghost road fade after you
+      move a town &mdash; that slow dimming is the piece.</p>
+  </details>
+</div>
+<script src="../lib/gifenc.js"></script>
+<script src="../lib/controls.js"></script>
+<script>
+'use strict';
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+const S = 2;                        // canvas px per field cell
+const FW = W / S, FH = H / S;       // 400 x 280 comfort grid
+const CELLS = FW * FH;
+
+// one seedable PRNG for everything, so ?seed=… reproduces a layout exactly
+let _s = (Date.now() ^ 0x9e3779b9) >>> 0;
+function rnd() {
+  _s = (_s + 0x6d2b79f5) >>> 0;
+  let t = _s;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+// --- fields ---------------------------------------------------------------
+// G   ground comfort: 0 = untouched vegetation, 1 = bare beaten earth
+// VIS G seen through a visibility kernel — this is what a walker can steer by,
+//     and the blur radius is literally how far off a track reads as a track
+const G   = new Float32Array(CELLS);
+const VIS = new Float32Array(CELLS);
+const TMP = new Float32Array(CELLS);
+
+// --- parameters -----------------------------------------------------------
+let PULL = 1.35;        // comfort pull: weight of ∇comfort against the beeline
+let WEAR = 0.008;       // comfort added per cell walked, times (1 - G)
+let HEAL = 0.00055;     // fraction of comfort lost per tick, everywhere
+let NW   = 380;         // walkers in flight
+
+const SPD      = 1.15;  // cells per tick
+const GRAD_K   = 26;    // ∇comfort (per cell) -> steering units
+const GRAD_CAP = 2.1;   // ceiling on the comfort term's length
+const TURN     = 0.24;  // heading inertia -> gentle curves, not kinks
+const ARRIVE   = 5.5;   // cells
+const VIS_R    = 6;     // box radius, applied twice -> sigma ≈ 5.3 cells
+const SUBSTEP  = 0.6;   // deposit spacing along a walker's move, in cells
+const MAX_TRIP = 1100;  // ticks before a lost walker is recycled
+const PLAZA_R  = 3.6;   // towns keep a small worn apron so roads have a mouth
+const MARGIN   = 32;    // cells of clear ground around the edge
+const NTOWNS   = () => 5 + (rnd() * 3 | 0);   // 5-7, rolled per layout
+// how crooked an individual is: a persistent tilt off the beeline. some spread
+// is essential — it is what makes walkers try routes nobody has tried — but too
+// much and the trips smear into haze instead of resolving into roads.
+let WANDER = 0.10;
+
+// --- towns ----------------------------------------------------------------
+// Each town carries a weight, and trips are drawn in proportion to it: real
+// road networks have a traffic hierarchy, and without one every pair-route
+// gets equal wear and you get a complete graph, which reads as a diagram.
+let towns = [];
+
+function rollTowns(n) {
+  // best-candidate sampling: spreads towns across the frame without ever
+  // landing on a ring or a lattice. the random term in the score is what keeps
+  // the layout lopsided — a well-optimised spread reads as designed.
+  const out = [];
+  for (let k = 0; k < n; k++) {
+    let best = null, bs = -1;
+    for (let c = 0; c < 9; c++) {
+      const p = { x: MARGIN + rnd() * (FW - 2 * MARGIN),
+                  y: MARGIN + rnd() * (FH - 2 * MARGIN) };
+      let d = 1e9;
+      for (const o of out) d = Math.min(d, Math.hypot(o.x - p.x, o.y - p.y));
+      if (!out.length) d = 90;
+      const s = d + rnd() * 48;
+      if (s > bs) { bs = s; best = p; }
+    }
+    best.w = 0.6 + rnd() * rnd() * 2.2;
+    out.push(best);
+  }
+  towns = out;
+}
+
+// --- walkers (flat typed arrays) -----------------------------------------
+let wx, wy, whx, why, wg, wo, wb, wsp, wt;
+
+function allocWalkers(n) {
+  wx = new Float32Array(n); wy = new Float32Array(n);
+  whx = new Float32Array(n); why = new Float32Array(n);
+  wg = new Int16Array(n); wo = new Int16Array(n);
+  wb = new Float32Array(n); wsp = new Float32Array(n); wt = new Uint16Array(n);
+}
+
+function pickGoal(from) {
+  const n = towns.length;
+  if (n < 2) return from;
+  let tot = 0;
+  for (let i = 0; i < n; i++) if (i !== from) tot += towns[i].w;
+  let r = rnd() * tot;
+  for (let i = 0; i < n; i++) {
+    if (i === from) continue;
+    r -= towns[i].w;
+    if (r <= 0) return i;
+  }
+  return from === 0 ? 1 : 0;
+}
+
+// place walker i at its origin town (or, on a cold start, somewhere along the
+// route already, so the first frame isn't a starburst leaving every town)
+function launch(i, spread) {
+  const o = wo[i], g = wg[i];
+  const a = towns[o], b = towns[g];
+  const u = spread ? rnd() * 0.85 : 0;
+  const jx = (rnd() - 0.5) * 6, jy = (rnd() - 0.5) * 6;
+  wx[i] = a.x + (b.x - a.x) * u + jx;
+  wy[i] = a.y + (b.y - a.y) * u + jy;
+  let dx = b.x - wx[i], dy = b.y - wy[i];
+  const d = Math.hypot(dx, dy) || 1;
+  whx[i] = dx / d; why[i] = dy / d;
+  wb[i] = (rnd() - 0.5) * 2 * WANDER;   // persistent lateral bias: no two
+  wsp[i] = 0.82 + rnd() * 0.42;   // people walk the same line or pace
+  wt[i] = 0;
+}
+
+function recycle(i) {
+  wo[i] = wg[i] < towns.length ? wg[i] : (rnd() * towns.length) | 0;
+  wg[i] = pickGoal(wo[i]);
+  launch(i, false);
+}
+
+function initWalkers(n, spread) {
+  allocWalkers(n);
+  NW = n;
+  for (let i = 0; i < n; i++) {
+    wo[i] = (rnd() * towns.length) | 0;
+    wg[i] = pickGoal(wo[i]);
+    launch(i, spread);
+  }
+}
+
+function resizeWalkers(n) {
+  const ox = wx, oy = wy, ohx = whx, ohy = why, og = wg, oo = wo,
+        ob = wb, osp = wsp, ot = wt, keep = Math.min(n, NW);
+  allocWalkers(n);
+  wx.set(ox.subarray(0, keep)); wy.set(oy.subarray(0, keep));
+  whx.set(ohx.subarray(0, keep)); why.set(ohy.subarray(0, keep));
+  wg.set(og.subarray(0, keep)); wo.set(oo.subarray(0, keep));
+  wb.set(ob.subarray(0, keep)); wsp.set(osp.subarray(0, keep));
+  wt.set(ot.subarray(0, keep));
+  const old = NW; NW = n;
+  for (let i = old; i < n; i++) {
+    wo[i] = (rnd() * towns.length) | 0;
+    wg[i] = pickGoal(wo[i]);
+    launch(i, true);
+  }
+}
+
+// --- visibility blur (separable box, twice ≈ gaussian) --------------------
+function boxH(src, dst, r) {
+  const inv = 1 / (2 * r + 1);
+  for (let y = 0; y < FH; y++) {
+    const row = y * FW;
+    let sum = src[row] * (r + 1);
+    for (let x = 1; x <= r; x++) sum += src[row + (x < FW ? x : FW - 1)];
+    for (let x = 0; x < FW; x++) {
+      dst[row + x] = sum * inv;
+      const add = x + r + 1, sub = x - r;
+      sum += src[row + (add < FW ? add : FW - 1)] - src[row + (sub > 0 ? sub : 0)];
+    }
+  }
+}
+function boxV(src, dst, r) {
+  const inv = 1 / (2 * r + 1);
+  for (let x = 0; x < FW; x++) {
+    let sum = src[x] * (r + 1);
+    for (let y = 1; y <= r; y++) sum += src[(y < FH ? y : FH - 1) * FW + x];
+    for (let y = 0; y < FH; y++) {
+      dst[y * FW + x] = sum * inv;
+      const add = y + r + 1, sub = y - r;
+      sum += src[(add < FH ? add : FH - 1) * FW + x] - src[(sub > 0 ? sub : 0) * FW + x];
+    }
+  }
+}
+function updateVision() {
+  boxH(G, TMP, VIS_R); boxV(TMP, VIS, VIS_R);
+  boxH(VIS, TMP, VIS_R); boxV(TMP, VIS, VIS_R);
+}
+
+// --- simulation -----------------------------------------------------------
+let tick = 0;
+let TS = 1;              // time scale: >1 during the head-start warm-up
+let visEvery = 2, healEvery = 1;
+
+function deposit(x, y, amt) {
+  const ix = x | 0, iy = y | 0;
+  if (ix < 1 || iy < 1 || ix > FW - 2 || iy > FH - 2) return;
+  const i = iy * FW + ix;
+  G[i] += amt * (1 - G[i]);
+  const s = amt * 0.42, q = amt * 0.10;   // a foot has width; so does a track
+  G[i - 1]  += s * (1 - G[i - 1]);
+  G[i + 1]  += s * (1 - G[i + 1]);
+  G[i - FW] += s * (1 - G[i - FW]);
+  G[i + FW] += s * (1 - G[i + FW]);
+  G[i - FW - 1] += q * (1 - G[i - FW - 1]);
+  G[i - FW + 1] += q * (1 - G[i - FW + 1]);
+  G[i + FW - 1] += q * (1 - G[i + FW - 1]);
+  G[i + FW + 1] += q * (1 - G[i + FW + 1]);
+}
+
+// towns keep a permanently trodden apron, so roads arrive at a mouth rather
+// than fraying into the grass a few cells short of the halo
+const plazaOff = [];
+for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+  const d = Math.hypot(dx, dy);
+  if (d <= PLAZA_R) plazaOff.push([dx, dy, 1 - d / (PLAZA_R + 1.4)]);
+}
+function plazas() {
+  for (const t of towns) {
+    const bx = Math.round(t.x), by = Math.round(t.y);
+    for (const [dx, dy, w] of plazaOff) {
+      const x = bx + dx, y = by + dy;
+      if (x < 0 || y < 0 || x >= FW || y >= FH) continue;
+      const i = y * FW + x, target = 0.62 * w;
+      if (G[i] < target) G[i] += (target - G[i]) * 0.06 * TS;
+    }
+  }
+}
+
+function step() {
+  const nT = towns.length;
+  if (nT >= 2) {
+    if (tick % visEvery === 0) updateVision();
+    const move = SPD * TS;
+    const gk = GRAD_K * PULL;
+    for (let i = 0; i < NW; i++) {
+      if (wg[i] >= nT || wo[i] >= nT) { recycle(i); continue; }
+      let x = wx[i], y = wy[i];
+      const g = towns[wg[i]];
+      let dx = g.x - x, dy = g.y - y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < ARRIVE || wt[i] > MAX_TRIP) { recycle(i); continue; }
+      wt[i] += TS;
+      dx /= dist; dy /= dist;
+
+      // ∇comfort, sampled through the visibility blur
+      let ix = x | 0, iy = y | 0;
+      if (ix < 1) ix = 1; else if (ix > FW - 2) ix = FW - 2;
+      if (iy < 1) iy = 1; else if (iy > FH - 2) iy = FH - 2;
+      const c = iy * FW + ix;
+      let cx = (VIS[c + 1] - VIS[c - 1]) * 0.5 * gk;
+      let cy = (VIS[c + FW] - VIS[c - FW]) * 0.5 * gk;
+      const cm = Math.hypot(cx, cy);
+      if (cm > GRAD_CAP) { const s = GRAD_CAP / cm; cx *= s; cy *= s; }
+
+      // desired direction: beeline + comfort + this walker's own crooked idea
+      let ux = dx + cx - dy * wb[i];
+      let uy = dy + cy + dx * wb[i];
+      const um = Math.hypot(ux, uy) || 1;
+      ux /= um; uy /= um;
+
+      // heading inertia (people turn, they don't teleport their facing)
+      const k = Math.min(1, TURN * TS);
+      let hx = whx[i] + (ux - whx[i]) * k;
+      let hy = why[i] + (uy - why[i]) * k;
+      const hm = Math.hypot(hx, hy) || 1;
+      hx /= hm; hy /= hm;
+      whx[i] = hx; why[i] = hy;
+
+      // walk, wearing the ground down at every substep
+      const len = Math.min(move * wsp[i], dist);
+      const n = Math.max(1, Math.ceil(len / SUBSTEP));
+      const sl = len / n, amt = WEAR * sl;
+      for (let s = 1; s <= n; s++) deposit(x + hx * sl * s, y + hy * sl * s, amt);
+      x += hx * len; y += hy * len;
+      if (x < 1) { x = 1; } else if (x > FW - 2) { x = FW - 2; }
+      if (y < 1) { y = 1; } else if (y > FH - 2) { y = FH - 2; }
+      wx[i] = x; wy[i] = y;
+    }
+  }
+  plazas();
+  if (tick % healEvery === 0) {
+    const f = 1 - Math.min(0.5, HEAL * TS * healEvery);
+    for (let i = 0; i < CELLS; i++) G[i] *= f;
+  }
+  tick++;
+}
+
+// --- palette --------------------------------------------------------------
+// wear -> light. black at zero so the whole field can be composited additively
+// over the ground texture and blurred back onto itself as bloom.
+const LR = new Uint8ClampedArray(256), LG = new Uint8ClampedArray(256),
+      LB = new Uint8ClampedArray(256);
+(function buildLUT() {
+  const st = [
+    [0.00, 0, 0, 0],
+    [0.04, 11, 5, 2],
+    [0.15, 48, 20, 7],
+    [0.36, 128, 56, 14],
+    [0.60, 206, 116, 32],
+    [0.82, 244, 178, 84],
+    [1.00, 255, 236, 196],
+  ];
+  for (let i = 0; i < 256; i++) {
+    const t = Math.pow(i / 255, 0.84);   // gamma: faint traces stay readable
+    let a = st[0], b = st[st.length - 1];
+    for (let s = 0; s < st.length - 1; s++) {
+      if (t >= st[s][0] && t <= st[s + 1][0]) { a = st[s]; b = st[s + 1]; break; }
+    }
+    const u = (t - a[0]) / ((b[0] - a[0]) || 1);
+    LR[i] = a[1] + (b[1] - a[1]) * u;
+    LG[i] = a[2] + (b[2] - a[2]) * u;
+    LB[i] = a[3] + (b[3] - a[3]) * u;
+  }
+})();
+
+// --- ground texture (static, rebuilt on new layout) -----------------------
+const baseC = document.createElement('canvas');
+baseC.width = FW; baseC.height = FH;
+const baseCtx = baseC.getContext('2d');
+
+function noiseGrid(n) {
+  const a = new Float32Array((n + 1) * (n + 1));
+  for (let i = 0; i < a.length; i++) a[i] = rnd();
+  return a;
+}
+function sampleGrid(a, n, u, v) {
+  const X = u * n, Y = v * n;
+  let ix = X | 0, iy = Y | 0;
+  if (ix > n - 1) ix = n - 1;
+  if (iy > n - 1) iy = n - 1;
+  const fx = X - ix, fy = Y - iy;
+  const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+  const i = iy * (n + 1) + ix, j = i + n + 1;
+  const a0 = a[i] + (a[i + 1] - a[i]) * sx;
+  const a1 = a[j] + (a[j + 1] - a[j]) * sx;
+  return a0 + (a1 - a0) * sy;
+}
+
+function buildBase() {
+  const oct = [[3, 0.50], [7, 0.27], [17, 0.15], [43, 0.08]]
+    .map(([n, amp]) => [noiseGrid(n), n, amp]);
+  const im = baseCtx.createImageData(FW, FH), d = im.data;
+  for (let y = 0, p = 0; y < FH; y++) {
+    const v = y / FH;
+    for (let x = 0; x < FW; x++, p += 4) {
+      const u = x / FW;
+      let s = 0;
+      for (const [a, n, amp] of oct) s += sampleGrid(a, n, u, v) * amp;
+      const t = Math.min(1, Math.max(0, (s - 0.30) / 0.44));
+      // deep blue-green ground, mottling toward a warmer olive
+      let r = 5 + t * 17, g = 10 + t * 21, b = 15 + t * 16;
+      const dx = (u - 0.5) * 2, dy = (v - 0.5) * 2;
+      const vg = 1 - 0.45 * Math.min(1, (dx * dx * 0.8 + dy * dy) * 0.7);
+      const sky = Math.max(0, 1 - v * 2.1) * 4.5;   // last cold light, top edge
+      const grain = (rnd() - 0.5) * 4.5;
+      d[p]     = r * vg + grain + sky * 0.35;
+      d[p + 1] = g * vg + grain + sky * 0.7;
+      d[p + 2] = b * vg + grain + sky;
+      d[p + 3] = 255;
+    }
+  }
+  baseCtx.putImageData(im, 0, 0);
+}
+
+// --- render surfaces ------------------------------------------------------
+const off = document.createElement('canvas');
+off.width = FW; off.height = FH;
+const offCtx = off.getContext('2d');
+const lightImg = offCtx.createImageData(FW, FH);
+const lpix = lightImg.data;
+for (let p = 3; p < lpix.length; p += 4) lpix[p] = 255;
+
+const b1 = document.createElement('canvas');
+b1.width = FW >> 1; b1.height = FH >> 1;
+const b1Ctx = b1.getContext('2d');
+const b2 = document.createElement('canvas');
+b2.width = FW >> 3; b2.height = FH >> 3;
+const b2Ctx = b2.getContext('2d');
+
+function radialSprite(size, r, g, b) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const x = c.getContext('2d');
+  const gr = x.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  gr.addColorStop(0, `rgba(${r},${g},${b},1)`);
+  gr.addColorStop(0.28, `rgba(${r},${g},${b},0.55)`);
+  gr.addColorStop(0.62, `rgba(${r},${g},${b},0.13)`);
+  gr.addColorStop(1, `rgba(${r},${g},${b},0)`);
+  x.fillStyle = gr;
+  x.fillRect(0, 0, size, size);
+  return c;
+}
+const townSprite = radialSprite(128, 255, 214, 158);
+const moteSprite = radialSprite(32, 255, 236, 206);
+
+let hoverTown = -1, dragTown = -1;
+
+function draw() {
+  // 1. ground
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(baseC, 0, 0, W, H);
+
+  // 2. wear, as light
+  for (let i = 0, p = 0; i < CELLS; i++, p += 4) {
+    let v = G[i] * 255;
+    if (v > 255) v = 255; else if (v < 0) v = 0;
+    const k = v | 0;
+    lpix[p] = LR[k]; lpix[p + 1] = LG[k]; lpix[p + 2] = LB[k];
+  }
+  offCtx.putImageData(lightImg, 0, 0);
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.drawImage(off, 0, 0, W, H);
+
+  // 3. two bloom octaves — the glow is the claim that wear is light
+  b1Ctx.globalCompositeOperation = 'copy';
+  b1Ctx.drawImage(off, 0, 0, b1.width, b1.height);
+  b2Ctx.globalCompositeOperation = 'copy';
+  b2Ctx.drawImage(b1, 0, 0, b2.width, b2.height);
+  ctx.globalAlpha = 0.32; ctx.drawImage(b1, 0, 0, W, H);
+  ctx.globalAlpha = 0.13; ctx.drawImage(b2, 0, 0, W, H);
+  ctx.globalAlpha = 1;
+
+  // 4. towns — halos rather than icons, so they read as places with gravity
+  for (let t = 0; t < towns.length; t++) {
+    const o = towns[t], px = o.x * S, py = o.y * S;
+    ctx.globalAlpha = 0.46;
+    ctx.drawImage(townSprite, px - 52, py - 52, 104, 104);
+    ctx.globalAlpha = 0.6;
+    ctx.drawImage(townSprite, px - 11, py - 11, 22, 22);
+    ctx.globalAlpha = 1;
+  }
+
+  // 5. walkers
+  ctx.globalAlpha = 0.7;
+  for (let i = 0; i < NW; i++) {
+    ctx.drawImage(moteSprite, wx[i] * S - 5.5, wy[i] * S - 5.5, 11, 11);
+  }
+  ctx.globalAlpha = 1;
+
+  // 6. affordance: only when the pointer is actually over a town, so gif
+  // captures with the mouse elsewhere stay clean
+  ctx.globalCompositeOperation = 'source-over';
+  const h = dragTown >= 0 ? dragTown : hoverTown;
+  if (h >= 0 && h < towns.length) {
+    const o = towns[h];
+    ctx.beginPath();
+    ctx.arc(o.x * S, o.y * S, 17, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255, 226, 180, 0.75)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+  }
+}
+
+// --- interaction ----------------------------------------------------------
+function evtField(e) {
+  const r = cv.getBoundingClientRect();
+  return [(e.clientX - r.left) * (cv.width / r.width) / S,
+          (e.clientY - r.top) * (cv.height / r.height) / S];
+}
+function nearestTown(x, y, maxD) {
+  let best = -1, bd = maxD * maxD;
+  for (let i = 0; i < towns.length; i++) {
+    const dx = towns[i].x - x, dy = towns[i].y - y, d = dx * dx + dy * dy;
+    if (d < bd) { bd = d; best = i; }
+  }
+  return best;
+}
+function removeTown(i) {
+  if (towns.length <= 2) return;
+  towns.splice(i, 1);
+  for (let k = 0; k < NW; k++) {           // remap, don't reshuffle everyone
+    if (wg[k] === i) { wg[k] = pickGoal(wo[k] > i ? wo[k] - 1 : wo[k]); }
+    else if (wg[k] > i) wg[k]--;
+    if (wo[k] === i) wo[k] = wg[k];
+    else if (wo[k] > i) wo[k]--;
+  }
+}
+
+let downAt = null, moved = false;
+cv.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  cv.setPointerCapture(e.pointerId);
+  const [x, y] = evtField(e);
+  downAt = [x, y]; moved = false;
+  dragTown = nearestTown(x, y, 15);
+});
+cv.addEventListener('pointermove', e => {
+  const [x, y] = evtField(e);
+  if (dragTown >= 0 && downAt) {
+    if (Math.hypot(x - downAt[0], y - downAt[1]) > 1.5) moved = true;
+    towns[dragTown].x = Math.min(FW - 3, Math.max(2, x));
+    towns[dragTown].y = Math.min(FH - 3, Math.max(2, y));
+    cv.style.cursor = 'grabbing';
+    return;
+  }
+  if (downAt && Math.hypot(x - downAt[0], y - downAt[1]) > 1.5) moved = true;
+  hoverTown = nearestTown(x, y, 15);
+  cv.style.cursor = hoverTown >= 0 ? 'grab' : 'crosshair';
+});
+cv.addEventListener('pointerup', e => {
+  const [x, y] = evtField(e);
+  const outside = x < 1 || y < 1 || x > FW - 2 || y > FH - 2;
+  if (dragTown >= 0) {
+    if (outside && moved) removeTown(dragTown);
+  } else if (downAt && !moved && !outside && towns.length < 14) {
+    towns.push({ x, y });                 // found a town on empty ground
+  }
+  dragTown = -1; downAt = null;
+  cv.style.cursor = 'crosshair';
+});
+cv.addEventListener('pointerleave', () => { hoverTown = -1; });
+cv.addEventListener('dblclick', e => {
+  const [x, y] = evtField(e);
+  const i = nearestTown(x, y, 15);
+  if (i >= 0) removeTown(i);
+});
+
+// --- warm-up --------------------------------------------------------------
+// The zero-interaction view must already be a living network, so the field is
+// run forward before the first paint. Larger strides cost proportionally less
+// per unit of simulated time (the per-tick blur and heal dominate), so the bulk
+// of the head start runs coarse and then tapers — a coarse stride smears the
+// trajectories, and the fine tail is what resolves them back into roads.
+function warmUp(simTicks, stride) {
+  TS = stride;
+  visEvery = stride > 2 ? 3 : 2; healEvery = stride > 2 ? 3 : 2;
+  const n = Math.round(simTicks / stride);
+  for (let i = 0; i < n; i++) step();
+  TS = 1; visEvery = 2; healEvery = 1;
+  updateVision();
+}
+
+function freshField(rollLayout, warm) {
+  if (rollLayout) { rollTowns(NTOWNS()); buildBase(); }
+  G.fill(0); VIS.fill(0); TMP.fill(0);
+  tick = 0;
+  initWalkers(NW, true);
+  if (warm) { warmUp(3000, 3); warmUp(1200, 1.5); }
+}
+
+// --- UI -------------------------------------------------------------------
+const $ = id => document.getElementById(id);
+
+// deep links: ?pull=..&wear=..&heal=..&nw=.. — also how this thing was tuned
+(function readQuery() {
+  const q = new URLSearchParams(location.search);
+  const num = (k, d) => (q.has(k) && isFinite(+q.get(k)) ? +q.get(k) : d);
+  if (q.has('seed')) _s = (Math.imul(+q.get('seed') | 0, 0x9e3779b1) ^ 0x85ebca6b) >>> 0;
+  PULL = num('pull', PULL);
+  WEAR = num('wear', WEAR);
+  HEAL = num('heal', HEAL);
+  WANDER = num('wander', WANDER);
+  NW   = Math.round(num('nw', NW));
+  $('s-pull').value = PULL; $('v-pull').textContent = PULL.toFixed(2);
+  $('s-wear').value = Math.round(WEAR * 1000); $('v-wear').textContent = WEAR.toFixed(3);
+  $('s-heal').value = Math.round(HEAL * 1e5); $('v-heal').textContent = HEAL.toFixed(5);
+  $('s-nw').value = NW; $('v-nw').textContent = NW;
+})();
+$('s-pull').oninput = e => { PULL = +e.target.value; $('v-pull').textContent = PULL.toFixed(2); };
+$('s-wear').oninput = e => { WEAR = +e.target.value / 1000; $('v-wear').textContent = WEAR.toFixed(3); };
+$('s-heal').oninput = e => { HEAL = +e.target.value / 100000; $('v-heal').textContent = HEAL.toFixed(5); };
+$('s-nw').oninput = e => { resizeWalkers(+e.target.value); $('v-nw').textContent = NW; };
+$('reroll').onclick = () => freshField(true, true);
+$('clear').onclick = () => { G.fill(0); VIS.fill(0); tick = 0; };
+
+freshField(true, true);
+SketchControls.attach({ canvas: cv, step, draw, ticksPerSecond: 60 });
+
+// headless-screenshot hook (harmless in a browser)
+window.__dp = { tick: () => tick, warm: warmUp, towns: () => towns };
+</script>
+</body>
+</html>
