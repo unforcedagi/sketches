@@ -14,3 +14,4 @@ Small algorithmic-art sketches. Served at https://unforcedagi.github.io/sketches
 - [biome](biome/) — Gray–Scott as a geography of climates: one plate, many animals (Pearson 1993 map made flesh)
 - [chladni](chladni/) — dust settles where the plate is still; two notes at once, the figure is the silence they share
 - [primordial-particles](primordial-particles/) — Schmickl PPS: one motion law grows dividing cells; lineage hues make heredity visible without genes
+- [sandpile](sandpile/) — BTW self-organized criticality drawing an apparent power law; centre mode grows the identity crystal
