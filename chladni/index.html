@@ -135,6 +135,9 @@
       <code>½(A²ψ<sub>A</sub>² + B²ψ<sub>B</sub>²)</code>.
       Shared nodes never hop. Changing interval or <em>one note</em> stirs the salt for three seconds
       so a new silence can be found; between interventions the figure holds.
+      A single note is one constraint, a corridor rather than an intersection, so the quiet
+      threshold scales with the slider (<code>TH·(1 − 0.75·lock)</code>) and the specimen
+      tightens toward a hairline while the chord stays untouched.
       <em>One note</em> fades B&rsquo;s amplitude to zero, which is how you
       watch a chord collapse into a specimen. Sound, if you ask for it, is two sines at 196 Hz
       times that ratio &mdash; G3 and (for the fifth) almost D4. Browsers block autoplay; the
@@ -277,7 +280,7 @@ function step() {
   sB = Math.sin(phB);
   phA += dphA;
   phB += dphB;
-  const th = TH;
+  const th = TH * (1 - 0.75 * lock);
   const hop = HOP;
   const jumping = agitate > 0;
   for (let p = 0; p < P; p++) {
