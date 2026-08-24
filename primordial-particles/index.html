@@ -25,7 +25,7 @@
     padding: 5px 10px; border-radius: 0 5px 5px 0; }
   #try .lead { color: #7c6d95; text-transform: uppercase; letter-spacing: 0.09em;
     font-size: 10px; margin-right: 4px; }
-  #try .k-stir { color: #ff9fc6; font-weight: 600; }
+  #try .k-blood { color: #ff9fc6; font-weight: 600; }
   #try .k-beta { color: #9db7ff; font-weight: 600; }
   /* faint group labels so the control strip reads in chunks */
   .glabel { font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase;
@@ -59,8 +59,10 @@
       blob pinches at the waist and lets go of a daughter that keeps its colour, and a ring marks the
       spot. Then hit <strong>scatter</strong> to slam the dish back to soup and watch cells
       crystallise out of it in about five seconds.
-      <strong>Drag</strong> on the dish to pipette in fresh particles,
-      <strong><span class="k-stir">shift-drag</span></strong> to stir a cell apart. Then push
+      <strong>Drag</strong> on the dish to pipette in fresh particles. Hit
+      <strong><span class="k-blood">one blood</span></strong> to repaint every family a single
+      colour &mdash; heredity has no backup copy &mdash; and watch new lineages diverge again
+      from drift alone. Then push
       <span class="k-beta">&beta;</span> past 22 &mdash; every cell boils off into gas &mdash; and
       drop it to 8, where they swarm but never grow up.</p>
   </header>
@@ -87,7 +89,8 @@
     </span>
     <span class="grp">
       <span class="glabel">lineage</span>
-      <span id="stats">&mdash;</span>
+      <button id="blood" title="observer-only: repaint every living family one colour — the physics never notices; new lineages re-diverge by drift">one blood</button>
+      <span id="stats" title="division counts stand down for ~4 s after a physics slider moves — a hand on the dial cannot mint divisions">&mdash;</span>
     </span>
   </div>
   <div id="credit">the Primordial Particle System of Schmickl, Stefanec &amp; Crailsheim
@@ -282,6 +285,10 @@ function marker(x, y, hue) {
 
 // --- the motion law -------------------------------------------------------
 let tick = 0;
+// witness stand-down: while a physics slider is settling, multi-child groups
+// read as continuation + nucleation, never division — so no public control
+// can mint the event the piece offers as evidence
+let taintUntil = -1;
 
 function turns() {
   const A = ALPHA * Math.PI / 180, B = BETA * Math.PI / 180;
@@ -470,6 +477,13 @@ function cluster() {
     if (p < 0) { cId[ci] = newCell(freshHue(), -1, 0); nBirths++; continue; }
     const sibs = kids.get(p);
     if (sibs.length === 1) { cId[ci] = p; continue; }   // same cell, continuing
+    if (tick < taintUntil) {
+      // the witness is standing down: largest fragment keeps the name, the
+      // rest are booked as nucleations — an undercount, never an overcount
+      sibs.sort((a, b) => cSize[b] - cSize[a]);
+      if (sibs.indexOf(ci) === 0) { cId[ci] = p; continue; }
+      cId[ci] = newCell(freshHue(), -1, 0); nBirths++; continue;
+    }
     // division: the larger daughter holds the mother line's hue, each bud
     // takes it plus a drift — so a family fans out over its generations
     sibs.sort((a, b) => cSize[b] - cSize[a]);
@@ -684,52 +698,27 @@ function inject(x, y, k) {
   }
   if (sN) { sN.value = Math.min(+sN.max, N); vN.textContent = N; }
 }
-function stir(x, y, dx, dy) {
-  const R = 11, R2 = R * R;
-  for (let i = 0; i < N; i++) {
-    let ax = px[i] - x, ay = py[i] - y;
-    if (ax > WW * 0.5) ax -= WW; else if (ax < -WW * 0.5) ax += WW;
-    if (ay > WH * 0.5) ay -= WH; else if (ay < -WH * 0.5) ay += WH;
-    const d2 = ax * ax + ay * ay;
-    if (d2 > R2) continue;
-    const f = 1 - Math.sqrt(d2) / R;
-    let nx = px[i] + dx * f * 1.6, ny = py[i] + dy * f * 1.6;
-    if (nx < 0) nx += WW; else if (nx >= WW) nx -= WW;
-    if (ny < 0) ny += WH; else if (ny >= WH) ny -= WH;
-    px[i] = nx; py[i] = ny;
-    ph[i] += (rnd() - 0.5) * 0.6 * f;
-  }
-}
-
 function evtWorld(e) {
   const r = cv.getBoundingClientRect();
   return [(e.clientX - r.left) * (cv.width / r.width) / S,
           (e.clientY - r.top) * (cv.height / r.height) / S];
 }
-let down = false, lastX = 0, lastY = 0, stirring = false;
+let down = false;
 cv.addEventListener('pointerdown', e => {
   if (e.button !== 0) return;
   e.preventDefault();
   cv.setPointerCapture(e.pointerId);
   const [x, y] = evtWorld(e);
-  down = true; lastX = x; lastY = y; stirring = e.shiftKey;
-  if (stirring) cv.style.cursor = 'grabbing'; else inject(x, y, 14);
+  down = true;
+  inject(x, y, 14);
 });
 cv.addEventListener('pointermove', e => {
   if (!down) return;
   const [x, y] = evtWorld(e);
-  if (stirring || e.shiftKey) {
-    let dx = x - lastX, dy = y - lastY;
-    if (dx > WW * 0.5) dx -= WW; else if (dx < -WW * 0.5) dx += WW;
-    if (dy > WH * 0.5) dy -= WH; else if (dy < -WH * 0.5) dy += WH;
-    stir(x, y, dx, dy);
-  } else {
-    inject(x, y, 7);
-  }
-  lastX = x; lastY = y;
+  inject(x, y, 7);
 });
-cv.addEventListener('pointerup', () => { down = false; stirring = false; cv.style.cursor = 'crosshair'; });
-cv.addEventListener('pointercancel', () => { down = false; stirring = false; });
+cv.addEventListener('pointerup', () => { down = false; });
+cv.addEventListener('pointercancel', () => { down = false; });
 
 // --- warm-up --------------------------------------------------------------
 // the zero-interaction view must already be alive, so the dish is run forward
@@ -765,14 +754,29 @@ const statsEl = $('stats'), sN = $('s-n'), vN = $('v-n');
   $('s-drift').value = DRIFT; $('v-drift').textContent = DRIFT + '°';
   sN.value = Math.min(+sN.max, N); vN.textContent = N;
 })();
-$('s-alpha').oninput = e => { ALPHA = +e.target.value; $('v-alpha').textContent = ALPHA + '°'; };
-$('s-beta').oninput  = e => { BETA = +e.target.value; $('v-beta').textContent = BETA + '°'; };
-$('s-r').oninput     = e => { RAD = +e.target.value; $('v-r').textContent = RAD.toFixed(1); };
-$('s-v').oninput     = e => { VEL = +e.target.value; $('v-v').textContent = VEL.toFixed(2); };
+const taint = () => { taintUntil = tick + MEM_TTL; };
+$('s-alpha').oninput = e => { ALPHA = +e.target.value; $('v-alpha').textContent = ALPHA + '°'; taint(); };
+$('s-beta').oninput  = e => { BETA = +e.target.value; $('v-beta').textContent = BETA + '°'; taint(); };
+$('s-r').oninput     = e => { RAD = +e.target.value; $('v-r').textContent = RAD.toFixed(1); taint(); };
+$('s-v').oninput     = e => { VEL = +e.target.value; $('v-v').textContent = VEL.toFixed(2); taint(); };
 $('s-drift').oninput = e => { DRIFT = +e.target.value; $('v-drift').textContent = DRIFT + '°'; };
 sN.oninput = e => setN(+e.target.value);
 $('reroll').onclick = () => freshDish(true);
 $('scatter').onclick = () => { scatterAll(); offCtx.clearRect(0, 0, W, H); };
+$('blood').onclick = () => {
+  // observer-only: collapse every living family to the dominant cell's colour.
+  // membership, physics and motion are untouched; daughters re-diverge by drift.
+  const size = new Map();
+  for (let i = 0; i < N; i++) { const c = pcell[i]; if (c >= 0) size.set(c, (size.get(c) || 0) + 1); }
+  let big = -1, bn = 0;
+  for (const [c, n] of size) if (n > bn) { bn = n; big = c; }
+  if (big < 0) return;
+  const h0 = cellHue[big & MASK], r0 = cellRoot[big & MASK];
+  for (const c of size.keys()) {
+    const k = c & MASK;
+    cellHue[k] = h0; cellRoot[k] = r0; cellGen[k] = 0;
+  }
+};
 
 freshDish(true);
 SketchControls.attach({ canvas: cv, step, draw, ticksPerSecond: 60 });
