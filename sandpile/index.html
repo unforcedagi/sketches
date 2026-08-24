@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sandpile</title>
+<style>
+  html, body { margin: 0; min-height: 100%; background: #05080c; color: #c4d0d8;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  #wrap { display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 16px; box-sizing: border-box; }
+  canvas { background: #05080c; border-radius: 10px; max-width: 100%;
+    cursor: crosshair; touch-action: none; }
+  #controls, #controls2 { display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+    justify-content: center; font-size: 12.5px; max-width: 800px; }
+  #controls2 { font-size: 11.5px; color: #869199; }
+  label { display: flex; gap: 6px; align-items: center; }
+  /* header: what this is, in one breath */
+  #head { width: 800px; max-width: 100%; margin: 2px 0 2px; }
+  #head h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.02em;
+    margin: 0; color: #dfeaf1; }
+  #tag { font-size: 12px; color: #869199; margin: 3px 0 0; line-height: 1.55; }
+  #try { font-size: 11.5px; color: #adb9c1; margin: 9px 0 0; line-height: 1.6;
+    border-left: 2px solid #26525f; background: rgba(112, 202, 232, 0.055);
+    padding: 5px 10px; border-radius: 0 5px 5px 0; }
+  #try .lead { color: #5b7681; text-transform: uppercase; letter-spacing: 0.09em;
+    font-size: 10px; margin-right: 4px; }
+  #try .k-pour { color: #7fd4ee; font-weight: 600; }
+  #try .k-mode { color: #93dfc0; font-weight: 600; }
+  /* faint group labels so the control strip reads in chunks */
+  .glabel { font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase;
+    color: #656f77; }
+  .grp { display: inline-flex; gap: 8px; align-items: center; }
+  input[type=range] { width: 96px; accent-color: #4fa8c8; }
+  #controls input[type=range] { width: 78px; }
+  button { background: #131a20; color: #c4d0d8; border: 1px solid #2c3a43;
+    border-radius: 6px; padding: 4px 12px; font: inherit; cursor: pointer; }
+  button:hover { background: #1c262e; }
+  #credit { font-size: 11px; color: #78838b; max-width: 720px; text-align: center;
+    line-height: 1.65; }
+  a { color: #62b6d6; }
+  #essay { max-width: 660px; font-size: 12.5px; line-height: 1.7; color: #939ea6;
+    margin-bottom: 26px; }
+  #essay summary { cursor: pointer; color: #78838b; font-size: 11px; text-align: center; }
+  #essay p { margin: 12px 0; }
+  #essay strong { color: #cfdce4; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header id="head">
+    <h1>Sandpile</h1>
+    <p id="tag">grains fall one at a time; a cell holding four topples one grain onto each neighbour;
+      topplings set off topplings. nobody tunes anything, and the pile settles at the exact edge where
+      an avalanche can be any size at all.</p>
+    <p id="try"><span class="lead">try this first</span> just watch the light: every grain starts an
+      avalanche, most die instantly, and every few seconds one sweeps a large part of the field. When it
+      finally stops, the dot it belongs to in the corner panel flashes &mdash; <strong>the pile is drawing
+      its own power law</strong>, and those dots are a straight line nobody fitted for it. Then
+      <strong>press and hold</strong> to <span class="k-pour">pour</span> sand and force one. Then hit
+      <span class="k-mode">drop&nbsp;&middot;&nbsp;centre</span>: the same rule, driven without noise,
+      grows a crystal instead.</p>
+  </header>
+  <canvas id="c" width="800" height="600"></canvas>
+  <div id="controls">
+    <span class="grp">
+      <span class="glabel">drive</span>
+      <label>rain <input id="s-rain" type="range" min="1" max="16" step="1" value="3"><span id="v-rain">3</span></label>
+      <button id="mode">drop &middot; random</button>
+    </span>
+    <span class="grp">
+      <span class="glabel">run</span>
+      <button id="reset">reset pile</button>
+    </span>
+  </div>
+  <div id="controls2">
+    <span class="grp">
+      <span class="glabel">avalanche</span>
+      <label>front speed <input id="s-relax" type="range" min="1" max="8" step="1" value="3"><span id="v-relax">3</span></label>
+      <label>afterglow <input id="s-glow" type="range" min="60" max="96" step="1" value="88"><span id="v-glow">0.88</span></label>
+    </span>
+    <span class="grp">
+      <span class="glabel">ground</span>
+      <label>relief <input id="s-relief" type="range" min="20" max="320" step="5" value="100"><span id="v-relief">1.00</span></label>
+    </span>
+  </div>
+  <div id="credit">the abelian sandpile of Bak, Tang &amp; Wiesenfeld
+    (<em>Self-organized criticality: an explanation of 1/<i>f</i> noise</em>,
+    <a href="https://doi.org/10.1103/PhysRevLett.59.381">Phys. Rev. Lett. 59, 381, 1987</a>): add a grain
+    when the pile is at rest, topple any cell holding <code>&ge;&nbsp;4</code> by giving one grain to each
+    of its four neighbours, let grains fall off the edge, repeat &middot;
+    <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
+  <details id="essay">
+    <summary>why this is interesting &mdash; philosophy &middot; technique &middot; aesthetics</summary>
+    <p><strong>Philosophy &mdash; criticality with nobody at the dial.</strong> Physics knew about
+      critical points long before 1987, but they were places you had to <em>drive</em> a system to:
+      hold water at exactly 374&nbsp;&deg;C and 218&nbsp;atm and it stops knowing whether it is a liquid
+      or a gas, fluctuations appear at every scale, and one degree either way the magic is gone. Bak,
+      Tang and Wiesenfeld's claim was that some systems go there by themselves and <em>stay</em>, with
+      no parameter for anyone to set. Add sand slowly and the pile steepens; steep pile, big avalanches;
+      big avalanches flatten it; flat pile, nothing happens and the sand piles back up. The critical
+      slope is not a setting, it is the only place the dynamics can rest. The consequence is the
+      unsettling part: at that state <strong>the size of the event is not proportionate to the size of
+      the trigger</strong>. Every avalanche here is started by exactly one grain. Most do nothing, one
+      in a thousand crosses the entire field, and the grain cannot be inspected beforehand to tell which
+      &mdash; the difference is in the pile, not the grain, and the pile is not knowable in the relevant
+      detail. That shape &mdash; no typical size, a power law instead of a bell curve &mdash; is what
+      earthquake magnitudes look like (Gutenberg&ndash;Richter), and extinction sizes in the fossil
+      record, and forest fires, and neuronal avalanches in cortical tissue, and the days a market falls.
+      Whether real sand does this is genuinely doubtful; rice in a narrow box does, ordinary sand
+      cheats by having inertia. But the <em>model</em> is not really about sand, it is about the class of
+      systems that are always poised, where asking &ldquo;what caused the big one&rdquo; is the wrong
+      question because the answer is always &ldquo;a grain, like all the others.&rdquo; Switch the drive
+      to the centre and the same toppling rule builds a crystal instead: the power law was never in the
+      rule, it was in the rule plus <em>noise</em>, and determinism drives the identical dynamics into
+      order.</p>
+    <p><strong>Technique &mdash; separation of timescales, and a worklist.</strong> The whole physics
+      lives in one discipline: <em>no grain is added while anything is still toppling</em>. Drive slowly
+      enough and avalanches never overlap, so each one is a well-defined event with a size you can count
+      &mdash; break that and the distribution smears, which is why sand you pour by hand here is deliberately
+      excluded from the histogram. Dissipation is the boundary and nothing else: grains that topple off the
+      edge are gone, and without that leak there is no steady state, only a pile that fills forever. The
+      cascade is run as a worklist &mdash; a queue of cells known to be over threshold, seeded by the grain
+      and refilled by each topple &mdash; never as a rescan of the grid, because a hundred-thousand-toppling
+      avalanche would otherwise cost a hundred thousand passes over thirty thousand cells. The queue is
+      drained one <em>generation</em> at a time rather than depth-first, which costs nothing (the pile is
+      abelian: the final configuration and the total toppling count are the same whatever order you use)
+      and buys everything, because a generation is exactly the wavefront. What a power law then does to
+      an animation is worth knowing: the mean avalanche is enormous, so if every event were drawn moving,
+      the giants would eat every frame and the histogram would fill at a grain an hour. So only one
+      avalanche at a time is rendered as a travelling front, and while it is on screen the rest are
+      driven, relaxed and counted inside their tick, leaving only the spark where they started. Nothing
+      is skipped and nothing is weighted &mdash; the distribution is over every event, watched or not
+      &mdash; it is the wall clock that is compressed, not the physics. The same trick is what runs the
+      pile through its first several hundred avalanches before the page paints, which is why there is
+      already a line in the corner when you arrive, and why it goes on straightening while you watch. The
+      inset is the piece's other
+      half and has its own correctness conditions: bins of equal <em>logarithmic</em> width, counts divided
+      by bin width to get a density &mdash; skip that and the plotted slope is wrong by exactly one &mdash;
+      and a least-squares fit that ignores the largest occupied bins, where the curve bends down not because
+      of physics but because the grid ends.</p>
+    <p><strong>Aesthetics &mdash; the pile is quiet, the avalanche is light.</strong> The obvious rendering
+      of a sandpile is four colours for four heights, and it is a diagram: legible, static, and it makes
+      the avalanche invisible because a toppling cell just swaps one colour for another. So the height
+      field is pushed down into a narrow band of cold mineral tones &mdash; near-black, slate, a pale
+      glacial violet at 3 &mdash; enough to read as relief and terrain, not enough to compete. What is
+      actually bright is a separate field with no physics in it at all: every toppling deposits light at
+      its cell, and the light decays. A resting pile is therefore almost dark &mdash; scintillating only
+      where the small avalanches keep going off, which is most of the time in most places &mdash; and an
+      avalanche is a luminous front travelling over the terrain with a fading wake behind it, which is
+      what an avalanche
+      <em>is</em> &mdash; an event, not a state. The sand is drawn crisp at cell resolution and the light
+      is drawn soft and bloomed over it, so the two never read as the same substance. The histogram is
+      built as an instrument in the corner rather than a chart bolted on: no chrome, one hairline, decade
+      ticks, and the bin flashes at the instant the avalanche that fed it stops moving &mdash; so you watch
+      the wave die on the left and the record of it light up on the right, and the connection between the
+      spectacle and the statistic is something you see rather than something you are told.</p>
+  </details>
+</div>
+<script src="../lib/gifenc.js"></script>
+<script src="../lib/controls.js"></script>
+<script>
+'use strict';
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+const S = 4;                        // canvas px per cell
+const FW = W / S, FH = H / S;       // 200 x 150 lattice
+const CELLS = FW * FH;
+const CX = FW >> 1, CY = FH >> 1;
+
+// one seedable PRNG for everything, so ?seed=… reproduces a run exactly
+let _s = (Date.now() ^ 0x9e3779b9) >>> 0;
+function rnd() {
+  _s = (_s + 0x6d2b79f5) >>> 0;
+  let t = _s;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+// --- fields ---------------------------------------------------------------
+// h    grains per cell. stable is 0-3; anything >= 4 is waiting to topple
+// heat "recently toppled", a decaying light field — no physics, pure record
+const h    = new Uint16Array(CELLS);
+const heat = new Float32Array(CELLS);
+const EDGE = new Uint8Array(CELLS);   // cells that leak grains off the lattice
+for (let y = 0; y < FH; y++) for (let x = 0; x < FW; x++) {
+  if (x === 0 || y === 0 || x === FW - 1 || y === FH - 1) EDGE[y * FW + x] = 1;
+}
+const mottle = new Float32Array(CELLS);
+for (let i = 0; i < CELLS; i++) mottle[i] = (rnd() - 0.5) * 1.6;
+
+// --- parameters -----------------------------------------------------------
+let RAIN   = 3;      // avalanche events driven per tick while the pile rests
+let RELAX  = 3;      // toppling generations advanced per tick (the front's pace):
+                     // at 60 ticks/s a front crosses the field in about a second
+let GLOW   = 0.88;   // per-tick survival of the light left by a toppling
+let RELIEF = 1.00;   // contrast of the height ramp — deliberately low, so the
+                     // terrain stays terrain and the avalanche stays the event
+let MODE   = 0;      // 0 = random rain, 1 = every grain at the exact centre
+const CENTER_BULK = 6;   // grains per relaxation in centre mode (abelian: same pile)
+const POUR_RATE = 7, POUR_R = 2.6;
+// An avalanche shorter than this is over before the eye could follow it move, so
+// it is resolved inside the tick and recorded. Only the ones worth watching are
+// handed to the animation. Nothing about the physics changes — every event is
+// still one grain, driven at rest, relaxed to completion, counted once — it is
+// only the wall clock that is compressed, and it has to be: the power law means
+// the giants would otherwise eat every frame and the histogram would never fill.
+const WATCH_GENS = 30;   // last longer than this and you are worth animating
+const SPARK_GENS = 3;    // an unwatched avalanche lights only where it started
+const COOLDOWN = 34;
+// light gain for a toppling: full for the avalanche being animated, dimmed for
+// the ones resolved inside a tick, off entirely for the parts of an unwatched
+// avalanche that would otherwise appear as travel that never happened
+let LIGHT = true, HG = 1, FRESH = 1.3, HCAP = 4;
+// centre drive relaxes the *entire* pile every time (its odometer is nonzero
+// everywhere), so the same light would be a white disc. There the pattern is the
+// subject, so the light is turned right down and the height ramp opened up.
+let MHG = 1, MRELIEF = 1;
+
+// --- avalanche worklist ---------------------------------------------------
+// A cascade is drained one generation at a time: everything unstable now topples,
+// and whatever that destabilises becomes the next generation. Same final pile as
+// any other order (the model is abelian) but the generation *is* the wavefront.
+let front = new Int32Array(CELLS), next = new Int32Array(CELLS);
+const qd  = new Uint8Array(CELLS);
+let frontN = 0, nextN = 0;
+let curSize = 0, active = false, tainted = false, lastSize = 0;
+
+function seedUnstable(i) {
+  if (!qd[i] && h[i] >= 4) { qd[i] = 1; front[frontN++] = i; }
+}
+
+function generation() {
+  for (let k = 0; k < frontN; k++) qd[front[k]] = 0;
+  nextN = 0;
+  let s = 0;
+  for (let k = 0; k < frontN; k++) {
+    const i = front[k], hv = h[i];
+    if (hv < 4) continue;
+    const n = hv >> 2;              // topple as many times as it is owed
+    h[i] = hv - (n << 2);
+    s += n;
+    if (LIGHT) {
+      const fr = FRESH * MHG, cap = HCAP * MHG;
+      let e = heat[i] + n * HG * MHG;
+      if (e > cap) e = cap; else if (e < fr) e = fr;   // a fresh topple is a crest
+      heat[i] = e;
+    }
+    if (!EDGE[i]) {
+      let j = i - 1;  h[j] += n; if (h[j] >= 4 && !qd[j]) { qd[j] = 1; next[nextN++] = j; }
+      j = i + 1;      h[j] += n; if (h[j] >= 4 && !qd[j]) { qd[j] = 1; next[nextN++] = j; }
+      j = i - FW;     h[j] += n; if (h[j] >= 4 && !qd[j]) { qd[j] = 1; next[nextN++] = j; }
+      j = i + FW;     h[j] += n; if (h[j] >= 4 && !qd[j]) { qd[j] = 1; next[nextN++] = j; }
+    } else {
+      // the boundary is the only dissipation there is: these grains are gone
+      const x = i % FW, y = (i / FW) | 0;
+      if (x > 0)      { const j = i - 1;  h[j] += n; if (h[j] >= 4 && !qd[j]) { qd[j] = 1; next[nextN++] = j; } }
+      if (x < FW - 1) { const j = i + 1;  h[j] += n; if (h[j] >= 4 && !qd[j]) { qd[j] = 1; next[nextN++] = j; } }
+      if (y > 0)      { const j = i - FW; h[j] += n; if (h[j] >= 4 && !qd[j]) { qd[j] = 1; next[nextN++] = j; } }
+      if (y < FH - 1) { const j = i + FW; h[j] += n; if (h[j] >= 4 && !qd[j]) { qd[j] = 1; next[nextN++] = j; } }
+    }
+  }
+  curSize += s;
+  const t = front; front = next; next = t;
+  frontN = nextN;
+}
+function relaxAll() { while (frontN > 0) generation(); }
+
+// --- the histogram the pile draws for itself ------------------------------
+// Equal-width bins in log10(size), six to the decade. Every bin contains at
+// least one integer size, so no bin is empty for arithmetic reasons alone.
+const BPD = 6, NB = 36, LB = Math.LN10 / BPD;
+const hist  = [new Float64Array(NB), new Float64Array(NB)];
+const total = [0, 0];
+const flash = new Float32Array(NB);
+let fit = null, fitAge = 0;
+
+function record(s) {
+  if (s < 1) return;
+  lastSize = s;
+  if (tainted) { tainted = false; return; }   // hand-poured: breaks slow driving
+  let b = Math.floor(Math.log(s) / LB);
+  if (b < 0) b = 0; else if (b > NB - 1) b = NB - 1;
+  hist[MODE][b]++; total[MODE]++;
+  flash[b] = 1;
+}
+function binWidth(k) { return Math.exp((k + 1) * LB) - Math.exp(k * LB); }
+
+function refit() {
+  const Hh = hist[MODE], T = total[MODE];
+  if (T < 40) { fit = null; return; }
+  let kmax = -1;
+  for (let k = NB - 1; k >= 0; k--) if (Hh[k] > 0) { kmax = k; break; }
+  const top = kmax - 3;               // the tail bends where the lattice ends
+  let n = 0, sx = 0, sy = 0, sxx = 0, sxy = 0;
+  for (let k = 1; k <= top; k++) {
+    const c = Hh[k];
+    if (c < 6) continue;
+    const x = (k + 0.5) / BPD;
+    const y = Math.log10(c / (T * binWidth(k)));
+    n++; sx += x; sy += y; sxx += x * x; sxy += x * y;
+  }
+  if (n < 4) { fit = null; return; }
+  const d = n * sxx - sx * sx;
+  if (Math.abs(d) < 1e-9) { fit = null; return; }
+  const m = (n * sxy - sx * sy) / d;
+  fit = { m, b: (sy - m * sx) / n, x0: 1 / BPD, x1: (top + 0.5) / BPD };
+}
+
+// --- driving --------------------------------------------------------------
+function drive() {
+  if (MODE === 1) {
+    const i = CY * FW + CX, n = RAIN * CENTER_BULK;
+    h[i] += n;
+    curSize = 0; seedUnstable(i);
+    if (frontN > 0) active = true;
+    return;
+  }
+  // slow driving: offer grains one at a time and stop the instant one lands on
+  // a cell that is already full. that separation is what makes an avalanche an
+  // event with a size, instead of weather with a rate.
+  for (let g = 0; g < 64; g++) {
+    const i = (rnd() * CELLS) | 0;
+    h[i]++;
+    if (h[i] >= 4) { curSize = 0; seedUnstable(i); active = true; return; }
+  }
+}
+
+let pouring = false, hovering = false, px = 0, py = 0;
+function pour() {
+  let any = false;
+  for (let g = 0; g < POUR_RATE; g++) {
+    const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * POUR_R;
+    const x = Math.round(px + Math.cos(a) * r), y = Math.round(py + Math.sin(a) * r);
+    if (x < 0 || y < 0 || x >= FW || y >= FH) continue;
+    const i = y * FW + x;
+    h[i]++;
+    if (h[i] >= 4) { seedUnstable(i); any = true; }
+  }
+  if (any) {
+    if (!active) { curSize = 0; active = true; }
+    tainted = true;
+  }
+}
+
+// --- simulation -----------------------------------------------------------
+let tick = 0, cooldown = 0;
+
+// Every event below is a real, properly separated avalanche and every one of them
+// is counted. What is rationed is the *animation*: only one avalanche at a time is
+// worth rendering as a travelling front, so while one is on screen — and for a
+// breath afterwards — the rest are resolved inside the tick at a low light gain.
+// The statistics are unbiased; only the wall clock is compressed, and it has to
+// be, because a power law means the giants would otherwise eat every frame.
+function step() {
+  if (pouring) pour();
+  if (frontN === 0 && !active) {
+    const budget = MODE === 1 ? 1 : RAIN;
+    for (let e = 0; e < budget; e++) {
+      drive();
+      if (!active) continue;
+      if (cooldown <= 0 || MODE === 1) {
+        HG = 0.40; FRESH = 0.50; HCAP = 1.0;
+        let g = 0;
+        while (frontN > 0 && g < WATCH_GENS) { generation(); g++; }
+        HG = 1; FRESH = 1.3; HCAP = 4;
+        if (frontN > 0) break;              // still running: this is the one we watch
+      } else {
+        HG = 0.30; FRESH = 0.46; HCAP = 1.0;
+        let g = 0;
+        while (frontN > 0 && g < SPARK_GENS) { generation(); g++; }
+        LIGHT = false; relaxAll(); LIGHT = true;
+        HG = 1; FRESH = 1.3; HCAP = 4;
+      }
+      record(curSize); active = false;
+    }
+    if (cooldown > 0) cooldown--;
+  }
+  for (let g = 0; g < RELAX && frontN > 0; g++) generation();
+  if (active && frontN === 0) { record(curSize); active = false; cooldown = COOLDOWN; }
+  for (let i = 0; i < CELLS; i++) heat[i] *= GLOW;
+  for (let k = 0; k < NB; k++) flash[k] *= 0.90;
+  if (--fitAge <= 0) { refit(); fitAge = 20; }
+  tick++;
+}
+
+// --- palette --------------------------------------------------------------
+// height: a narrow cold band, present as terrain and never as the event
+const H0 = [9, 13, 18];
+const HRAMP = [[9, 13, 18], [14, 21, 27], [20, 28, 36], [28, 33, 48]];
+const hr = new Float32Array(4), hg = new Float32Array(4), hb = new Float32Array(4);
+function buildRelief() {
+  const r = RELIEF * MRELIEF;
+  for (let k = 0; k < 4; k++) {
+    hr[k] = H0[0] + (HRAMP[k][0] - H0[0]) * r;
+    hg[k] = H0[1] + (HRAMP[k][1] - H0[1]) * r;
+    hb[k] = H0[2] + (HRAMP[k][2] - H0[2]) * r;
+  }
+}
+function applyMode() {
+  MHG = MODE ? 0.085 : 1;
+  MRELIEF = MODE ? 3.1 : 1;
+  buildRelief();
+}
+// toppling light: glacial cyan into white
+const LR = new Uint8ClampedArray(256), LG = new Uint8ClampedArray(256),
+      LBu = new Uint8ClampedArray(256);
+(function buildLUT() {
+  const st = [
+    [0.00,   0,   0,   0],
+    [0.07,   7,  24,  36],
+    [0.22,  22,  76, 108],
+    [0.44,  46, 143, 179],
+    [0.66, 112, 202, 226],
+    [0.86, 192, 235, 246],
+    [1.00, 246, 252, 255],
+  ];
+  for (let i = 0; i < 256; i++) {
+    const t = i / 255;
+    let a = st[0], b = st[st.length - 1];
+    for (let s = 0; s < st.length - 1; s++) {
+      if (t >= st[s][0] && t <= st[s + 1][0]) { a = st[s]; b = st[s + 1]; break; }
+    }
+    const u = (t - a[0]) / ((b[0] - a[0]) || 1);
+    LR[i]  = a[1] + (b[1] - a[1]) * u;
+    LG[i]  = a[2] + (b[2] - a[2]) * u;
+    LBu[i] = a[3] + (b[3] - a[3]) * u;
+  }
+})();
+// heat -> LUT index, saturating so a repeatedly-toppling core stays legible
+const HEATIDX = new Uint8Array(1024);
+for (let i = 0; i < 1024; i++) HEATIDX[i] = 255 * (1 - Math.exp(-(i / 256) * 1.15));
+
+// --- render surfaces ------------------------------------------------------
+const sandC = document.createElement('canvas');
+sandC.width = FW; sandC.height = FH;
+const sandCtx = sandC.getContext('2d');
+const sandImg = sandCtx.createImageData(FW, FH);
+const spix = sandImg.data;
+for (let p = 3; p < spix.length; p += 4) spix[p] = 255;
+
+const lightC = document.createElement('canvas');
+lightC.width = FW; lightC.height = FH;
+const lightCtx = lightC.getContext('2d');
+const lightImg = lightCtx.createImageData(FW, FH);
+const lpix = lightImg.data;
+for (let p = 3; p < lpix.length; p += 4) lpix[p] = 255;
+
+const b1 = document.createElement('canvas');
+b1.width = FW >> 1; b1.height = FH >> 1;
+const b1Ctx = b1.getContext('2d');
+const b2 = document.createElement('canvas');
+b2.width = FW >> 3; b2.height = FH >> 3;
+const b2Ctx = b2.getContext('2d');
+
+const vig = document.createElement('canvas');
+vig.width = W; vig.height = H;
+(function buildVignette() {
+  const x = vig.getContext('2d');
+  const g = x.createRadialGradient(W / 2, H / 2, H * 0.30, W / 2, H / 2, H * 0.86);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(0,0,0,0.62)');
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+})();
+
+// --- the inset ------------------------------------------------------------
+const PW = 220, PH = 140, PX = W - 14 - PW, PY = H - 14 - PH;
+const AX0 = PX + 13, AX1 = PX + PW - 9, AY0 = PY + 25, AY1 = PY + PH - 32;
+const XDEC = 5.6, YSPAN = 9;
+const SUP = ['', '', '²', '³', '⁴', '⁵', '⁶'];
+
+function panel() {
+  const Hh = hist[MODE], T = total[MODE];
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+  // backing
+  ctx.beginPath();
+  const r = 7;
+  ctx.moveTo(PX + r, PY);
+  ctx.arcTo(PX + PW, PY, PX + PW, PY + PH, r);
+  ctx.arcTo(PX + PW, PY + PH, PX, PY + PH, r);
+  ctx.arcTo(PX, PY + PH, PX, PY, r);
+  ctx.arcTo(PX, PY, PX + PW, PY, r);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(5, 10, 15, 0.76)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(120, 180, 210, 0.20)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.font = '8.5px ui-monospace, Menlo, monospace';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = 'rgba(140, 178, 198, 0.85)';
+  ctx.textAlign = 'left';
+  ctx.fillText(MODE === 1 ? 'RELAXATION SIZE  ·  LOG–LOG' : 'AVALANCHE SIZE  ·  LOG–LOG', PX + 12, PY + 15);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(110, 145, 165, 0.8)';
+  ctx.fillText('n ' + T.toLocaleString(), PX + PW - 10, PY + 15);
+
+  // decade grid
+  ctx.textAlign = 'center';
+  for (let d = 0; d <= 5; d++) {
+    const gx = AX0 + (d / XDEC) * (AX1 - AX0);
+    ctx.strokeStyle = 'rgba(110, 160, 190, 0.10)';
+    ctx.beginPath(); ctx.moveTo(gx, AY0); ctx.lineTo(gx, AY1 + 3); ctx.stroke();
+    if (d % 2 === 0) {
+      ctx.fillStyle = 'rgba(105, 138, 158, 0.72)';
+      ctx.fillText(d === 0 ? '1' : '10' + SUP[d], gx, AY1 + 13);
+    }
+  }
+  ctx.strokeStyle = 'rgba(120, 175, 205, 0.28)';
+  ctx.beginPath(); ctx.moveTo(AX0, AY0 - 3); ctx.lineTo(AX0, AY1 + 3); ctx.stroke();
+
+  if (T < 8) {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(104, 134, 152, 0.55)';
+    ctx.fillText(MODE === 1 ? 'no noise, no distribution' : 'listening…',
+      (AX0 + AX1) / 2, (AY0 + AY1) / 2);
+  } else {
+    // density: counts divided by bin width, or the slope reads wrong by one
+    const xs = [], ys = [], ks = [];
+    let ymax = -99;
+    for (let k = 0; k < NB; k++) {
+      if (Hh[k] <= 0) continue;
+      const y = Math.log10(Hh[k] / (T * binWidth(k)));
+      if (y > ymax) ymax = y;
+      ks.push(k); ys.push(y);
+      xs.push(AX0 + ((k + 0.5) / BPD / XDEC) * (AX1 - AX0));
+    }
+    const ytop = Math.ceil(ymax * 2) / 2 + 0.4;
+    const yof = v => AY1 - ((v - (ytop - YSPAN)) / YSPAN) * (AY1 - AY0);
+
+    // fitted line first, so the dots sit on top of it
+    if (fit) {
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = 'rgba(206, 238, 250, 0.5)';
+      ctx.lineWidth = 1.1;
+      const lx = k => AX0 + (k / XDEC) * (AX1 - AX0);
+      ctx.beginPath();
+      ctx.moveTo(lx(fit.x0), yof(fit.m * fit.x0 + fit.b));
+      ctx.lineTo(lx(fit.x1), yof(fit.m * fit.x1 + fit.b));
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = 'rgba(196, 232, 246, 0.8)';
+      ctx.fillText('slope −' + (-fit.m).toFixed(2), AX1, Math.min(AY1 - 2,
+        Math.max(AY0 + 9, yof(fit.m * fit.x1 + fit.b) - 6)));
+    }
+
+    // the pile's own curve
+    ctx.strokeStyle = 'rgba(112, 176, 208, 0.34)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let q = 0; q < xs.length; q++) {
+      const yy = yof(ys[q]);
+      if (q === 0) ctx.moveTo(xs[q], yy); else ctx.lineTo(xs[q], yy);
+    }
+    ctx.stroke();
+
+    ctx.globalCompositeOperation = 'lighter';
+    for (let q = 0; q < xs.length; q++) {
+      const yy = yof(ys[q]), f = flash[ks[q]];
+      if (yy < AY0 - 4 || yy > AY1 + 4) continue;
+      if (f > 0.02) {
+        ctx.beginPath();
+        ctx.arc(xs[q], yy, 2.2 + 6.5 * f, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(120, 210, 245,' + (0.30 * f).toFixed(3) + ')';
+        ctx.fill();
+      }
+      ctx.beginPath();
+      ctx.arc(xs[q], yy, 1.7, 0, Math.PI * 2);
+      const b = 0.62 + 0.38 * f;
+      ctx.fillStyle = 'rgba(' + (150 + 100 * f | 0) + ',' + (206 + 46 * f | 0) + ',232,' + b.toFixed(2) + ')';
+      ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  // footer: what is happening right now, next to the record of it
+  ctx.font = '8.5px ui-monospace, Menlo, monospace';
+  ctx.textAlign = 'left';
+  if (active) {
+    ctx.fillStyle = 'rgba(150, 224, 250, 0.95)';
+    ctx.fillText('toppling  ' + curSize.toLocaleString(), PX + 12, PY + PH - 9);
+  } else {
+    ctx.fillStyle = 'rgba(104, 134, 152, 0.75)';
+    ctx.fillText('last  ' + lastSize.toLocaleString(), PX + 12, PY + PH - 9);
+  }
+  ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(104, 134, 152, 0.6)';
+  ctx.fillText('P(s)', PX + PW - 10, PY + PH - 9);
+  ctx.restore();
+}
+
+// --- draw -----------------------------------------------------------------
+function draw() {
+  // 1. the sand itself, crisp at cell resolution
+  for (let i = 0, p = 0; i < CELLS; i++, p += 4) {
+    let k = h[i]; if (k > 3) k = 3;
+    const m = mottle[i];
+    spix[p] = hr[k] + m; spix[p + 1] = hg[k] + m; spix[p + 2] = hb[k] + m;
+  }
+  sandCtx.putImageData(sandImg, 0, 0);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(sandC, 0, 0, W, H);
+
+  // 2. topplings, as light — soft, so sand and event never read alike
+  for (let i = 0, p = 0; i < CELLS; i++, p += 4) {
+    let v = heat[i] * 256;
+    if (v <= 0.5) { lpix[p] = 0; lpix[p + 1] = 0; lpix[p + 2] = 0; continue; }
+    if (v > 1023) v = 1023;
+    const k = HEATIDX[v | 0];
+    lpix[p] = LR[k]; lpix[p + 1] = LG[k]; lpix[p + 2] = LBu[k];
+  }
+  lightCtx.putImageData(lightImg, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.drawImage(lightC, 0, 0, W, H);
+
+  // 3. two bloom octaves
+  b1Ctx.globalCompositeOperation = 'copy';
+  b1Ctx.drawImage(lightC, 0, 0, b1.width, b1.height);
+  b2Ctx.globalCompositeOperation = 'copy';
+  b2Ctx.drawImage(b1, 0, 0, b2.width, b2.height);
+  ctx.globalAlpha = 0.38; ctx.drawImage(b1, 0, 0, W, H);
+  ctx.globalAlpha = 0.16; ctx.drawImage(b2, 0, 0, W, H);
+  ctx.globalAlpha = 1;
+
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(vig, 0, 0);
+
+  // 4. affordance, only while the pointer is actually over the field
+  if (hovering) {
+    ctx.beginPath();
+    ctx.arc(px * S + S / 2, py * S + S / 2, POUR_R * S + (pouring ? 5 : 2), 0, Math.PI * 2);
+    ctx.strokeStyle = pouring ? 'rgba(178, 232, 250, 0.8)' : 'rgba(150, 196, 216, 0.35)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  }
+
+  panel();
+}
+
+// --- interaction ----------------------------------------------------------
+function evtCell(e) {
+  const r = cv.getBoundingClientRect();
+  px = (e.clientX - r.left) * (cv.width / r.width) / S;
+  py = (e.clientY - r.top) * (cv.height / r.height) / S;
+}
+cv.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  cv.setPointerCapture(e.pointerId);
+  evtCell(e); pouring = true; hovering = true;
+});
+cv.addEventListener('pointermove', e => { evtCell(e); hovering = true; });
+cv.addEventListener('pointerup', () => { pouring = false; });
+cv.addEventListener('pointercancel', () => { pouring = false; });
+cv.addEventListener('pointerleave', () => { pouring = false; hovering = false; });
+
+// --- warm-up --------------------------------------------------------------
+// The default view must land in mid-avalanche weather, so the pile is driven to
+// the critical state before the first paint, and then driven a while longer with
+// the histogram recording — the inset already carries a line when you arrive.
+function meanHeight() {
+  let s = 0;
+  for (let i = 0; i < CELLS; i++) s += h[i];
+  return s / CELLS;
+}
+function warmUp(samples) {
+  // transient: bulk-add and relax. abelian, so a bulk add reaches the same pile
+  // as the same grains one at a time — it is only the avalanche *sizes* that
+  // need slow driving, and nothing is being measured yet.
+  for (let it = 0; it < 4000; it++) {
+    for (let g = 0; g < 512; g++) {
+      const i = (rnd() * CELLS) | 0;
+      h[i]++; if (h[i] >= 4) seedUnstable(i);
+    }
+    relaxAll();
+    if ((it & 3) === 3 && meanHeight() >= 2.09) break;
+  }
+  // critical: one grain, one avalanche, one histogram entry
+  for (let a = 0; a < samples; a++) {
+    let armed = false;
+    for (let g = 0; g < 64; g++) {
+      const i = (rnd() * CELLS) | 0;
+      h[i]++; if (h[i] >= 4) { seedUnstable(i); armed = true; break; }
+    }
+    if (!armed) continue;
+    curSize = 0; relaxAll(); record(curSize);
+  }
+  heat.fill(0); flash.fill(0);
+  active = false; tainted = false;
+  refit();
+}
+
+// centre mode: the crystal only becomes a crystal at some size, so grow it
+// instantly to where the structure is legible and let the live drive take over
+function growCrystal(grains, chunk) {
+  const i = CY * FW + CX;
+  for (let k = 0; k < grains; k += chunk) {
+    h[i] += chunk; seedUnstable(i); relaxAll();
+  }
+  heat.fill(0); curSize = 0; active = false;
+}
+
+function freshPile() {
+  h.fill(0); heat.fill(0); qd.fill(0);
+  frontN = 0; nextN = 0; curSize = 0; active = false; tainted = false;
+  lastSize = 0; tick = 0;
+  hist[MODE].fill(0); total[MODE] = 0; flash.fill(0); fit = null;
+  if (MODE === 0) { warmUp(900); for (let i = 0; i < 90; i++) step(); }
+  else { growCrystal(26000, 2000); }
+  refit();
+}
+
+// --- UI -------------------------------------------------------------------
+const $ = id => document.getElementById(id);
+
+// deep links: ?seed=..&rain=..&relax=..&glow=..&relief=..&mode=..
+(function readQuery() {
+  const q = new URLSearchParams(location.search);
+  const num = (k, d) => (q.has(k) && isFinite(+q.get(k)) ? +q.get(k) : d);
+  if (q.has('seed')) _s = (Math.imul(+q.get('seed') | 0, 0x9e3779b1) ^ 0x85ebca6b) >>> 0;
+  RAIN   = Math.round(num('rain', RAIN));
+  RELAX  = Math.round(num('relax', RELAX));
+  GLOW   = num('glow', GLOW);
+  RELIEF = num('relief', RELIEF);
+  MODE   = num('mode', 0) ? 1 : 0;
+  $('s-rain').value = RAIN;     $('v-rain').textContent = RAIN;
+  $('s-relax').value = RELAX;   $('v-relax').textContent = RELAX;
+  $('s-glow').value = Math.round(GLOW * 100);   $('v-glow').textContent = GLOW.toFixed(2);
+  $('s-relief').value = Math.round(RELIEF * 100); $('v-relief').textContent = RELIEF.toFixed(2);
+  $('mode').innerHTML = MODE ? 'drop &middot; centre' : 'drop &middot; random';
+})();
+applyMode();
+
+$('s-rain').oninput   = e => { RAIN = +e.target.value; $('v-rain').textContent = RAIN; };
+$('s-relax').oninput  = e => { RELAX = +e.target.value; $('v-relax').textContent = RELAX; };
+$('s-glow').oninput   = e => { GLOW = +e.target.value / 100; $('v-glow').textContent = GLOW.toFixed(2); };
+$('s-relief').oninput = e => {
+  RELIEF = +e.target.value / 100; $('v-relief').textContent = RELIEF.toFixed(2); buildRelief();
+};
+$('reset').onclick = () => freshPile();
+$('mode').onclick = () => {
+  // the two drives are different pieces: noise needs a critical pile to sit on,
+  // determinism needs a clean floor to grow its crystal out of
+  MODE = MODE ? 0 : 1;
+  $('mode').innerHTML = MODE ? 'drop &middot; centre' : 'drop &middot; random';
+  applyMode();
+  h.fill(0); heat.fill(0); qd.fill(0);
+  frontN = 0; nextN = 0; curSize = 0; active = false; tainted = false; lastSize = 0;
+  flash.fill(0); fit = null;
+  if (MODE === 0) {
+    if (total[0] === 0) { warmUp(900); } else { warmUp(0); }
+    for (let i = 0; i < 90; i++) step();
+  } else {
+    growCrystal(18000, 1500);
+  }
+  refit();
+};
+
+freshPile();
+SketchControls.attach({ canvas: cv, step, draw, ticksPerSecond: 60 });
+
+// headless-screenshot hook (harmless in a browser)
+window.__sp = {
+  tick: () => tick, mean: meanHeight, fit: () => fit,
+  hist: () => Array.from(hist[MODE]), n: () => total[MODE],
+};
+</script>
+</body>
+</html>
