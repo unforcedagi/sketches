@@ -126,7 +126,9 @@
       figures, cosine sum and difference, with Kirchhoff frequencies <code>ω ∝ m² + n²</code>.
       Default pair (4,1)<sup>−</sup> and (4,3)<sup>+</sup>: opposite parity, so the diagonal is a
       node of one note and an antinode of the other. Ratio 25/17 ≈ 1.471, a fifth 34 cents flat of
-      just 3/2. Octave, fourth and tritone are other pairs from the same family (tritone is
+      just 3/2. Octave, fourth and tritone are other pairs from the same family, always with the
+      lower Kirchhoff number as A so <em>one note</em> drops the higher pitch
+      (fourth is (3,2)<sup>−</sup>+(4,1)<sup>+</sup> at 17/13; tritone is
       (5,2)<sup>−</sup>+(5,4)<sup>+</sup> at 41/29, half a cent from √2).
       Sixteen thousand grains hop when instantaneous |z| exceeds a threshold and then walk downhill
       of the time-averaged energy
@@ -161,7 +163,7 @@ const CHORDS = {
   // Mixing parities is the point: the chord agitates the diagonal; one note restores it.
   fifth:   { mA: 4, nA: 1, sA: -1, mB: 4, nB: 3, sB: +1 }, // 25/17 ≈ 3:2, 34¢ flat
   octave:  { mA: 2, nA: 1, sA: -1, mB: 3, nB: 1, sB: +1 }, // 10/5  = 2
-  fourth:  { mA: 4, nA: 1, sA: -1, mB: 3, nB: 2, sB: +1 }, // 17/13 ≈ 4:3, 34¢ flat
+  fourth:  { mA: 3, nA: 2, sA: -1, mB: 4, nB: 1, sB: +1 }, // 17/13 ≈ 4:3, 34¢ flat
   tritone: { mA: 5, nA: 2, sA: -1, mB: 5, nB: 4, sB: +1 }, // 41/29 ≈ √2
 };
 
@@ -383,10 +385,10 @@ $('reset').onclick = () => { scatter(); };
 
 function tuneAudio() {
   if (!audio) return;
-  const ratio = omegaB / omegaA;
+  const lo = Math.min(omegaA, omegaB);
   const now = audio.ctx.currentTime;
-  audio.oA.frequency.setTargetAtTime(F0, now, 0.04);
-  audio.oB.frequency.setTargetAtTime(F0 * ratio, now, 0.04);
+  audio.oA.frequency.setTargetAtTime(F0 * omegaA / lo, now, 0.04);
+  audio.oB.frequency.setTargetAtTime(F0 * omegaB / lo, now, 0.04);
   audio.gA.gain.setTargetAtTime(soundOn ? 0.07 : 0, now, 0.05);
   audio.gB.gain.setTargetAtTime(soundOn ? 0.07 * mixB : 0, now, 0.05);
 }
