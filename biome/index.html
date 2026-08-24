@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Biome</title>
+<style>
+  html, body { margin: 0; min-height: 100%; background: #07090c; color: #d4d8e0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  #wrap { display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 16px; box-sizing: border-box; }
+  canvas { background: #07090c; border-radius: 10px; max-width: 100%;
+    cursor: crosshair; image-rendering: pixelated; touch-action: none; }
+  #controls, #controls2 { display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    justify-content: center; font-size: 12.5px; max-width: 780px; }
+  #controls2 { font-size: 11.5px; color: #7d8296; }
+  label { display: flex; gap: 6px; align-items: center; }
+  #head { width: 768px; max-width: 100%; margin: 2px 0 2px; }
+  #head h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.02em;
+    margin: 0; color: #e7e2d6; }
+  #tag { font-size: 12px; color: #8b8fa3; margin: 3px 0 0; line-height: 1.55; }
+  #try { font-size: 11.5px; color: #adb2c4; margin: 9px 0 0; line-height: 1.6;
+    border-left: 2px solid #3a5544; background: rgba(110,180,140,0.05);
+    padding: 5px 10px; border-radius: 0 5px 5px 0; }
+  #try .lead { color: #6b7093; text-transform: uppercase; letter-spacing: 0.09em;
+    font-size: 10px; margin-right: 4px; }
+  #try .k-lock { color: #e0c56a; font-weight: 600; }
+  #try .k-plant { color: #7fc6a0; font-weight: 600; }
+  .glabel { font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase;
+    color: #575c78; }
+  .grp { display: inline-flex; gap: 8px; align-items: center; }
+  input[type=range] { width: 96px; accent-color: #c9a24c; }
+  button { background: #171b26; color: #d6d9e2; border: 1px solid #333a4d;
+    border-radius: 6px; padding: 4px 11px; font: inherit; cursor: pointer; }
+  button:hover { background: #212736; }
+  select { background: #171b26; color: #d6d9e2; border: 1px solid #333a4d;
+    border-radius: 6px; padding: 3px 6px; font: inherit; }
+  #credit { font-size: 11px; color: #6f7488; max-width: 700px; text-align: center;
+    line-height: 1.65; }
+  a { color: #8fa6e8; }
+  #essay { max-width: 660px; font-size: 12.5px; line-height: 1.7; color: #9ba0b3;
+    margin-bottom: 26px; }
+  #essay summary { cursor: pointer; color: #6f7488; font-size: 11px; text-align: center; }
+  #essay p { margin: 12px 0; }
+  #essay strong { color: #d8dae4; }
+  #essay em { color: #c2b394; font-style: normal; }
+  body.paper { background: #f3eee4; color: #2c261f; }
+  body.paper canvas { background: #faf7f0; }
+  body.paper button, body.paper select { background: #ebe5d8; color: #2c261f; border-color: #c9bfae; }
+  body.paper #head h1 { color: #241e17; }
+  body.paper #tag { color: #7d7365; }
+  body.paper #try { color: #4c443a; border-left-color: #c1b49c; background: rgba(120,96,60,0.07); }
+  body.paper #try .lead { color: #9a8f7c; }
+  body.paper #try .k-lock { color: #8a5a22; }
+  body.paper #try .k-plant { color: #3d6b52; }
+  body.paper .glabel, body.paper #controls2 { color: #a2977f; }
+  body.paper #credit, body.paper #essay summary { color: #8d8272; }
+  body.paper #essay { color: #4c443a; }
+  body.paper #essay strong { color: #241e17; }
+  body.paper a { color: #7a5c33; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header id="head">
+    <h1>Biome</h1>
+    <p id="tag">two chemicals, two numbers, and a gradient &mdash; spots, worms, mazes and a desert
+      living next to each other on one plate, because the climate is different from east to west.</p>
+    <p id="try"><span class="lead">try this first</span> just watch. The spotted country, the worm
+      country and the empty country are the same reaction. Then pull
+      <span class="k-lock">one climate</span> all the way up: the geography collapses into a single
+      animal. <span class="k-plant">Drag</span> to plant a seed in a climate that has none.</p>
+  </header>
+  <canvas id="c" width="768" height="768"></canvas>
+  <div id="controls">
+    <span class="grp">
+      <span class="glabel">look</span>
+      <select id="pal" title="how the two chemicals are inked">
+        <option value="lichen">lichen</option>
+        <option value="ink">ink</option>
+        <option value="ember">ember</option>
+      </select>
+    </span>
+    <span class="grp">
+      <span class="glabel">run</span>
+      <button id="stir" title="scatter new nuclei without wiping the plate">stir</button>
+      <button id="reset" title="fresh seed, same climate map">reset</button>
+    </span>
+  </div>
+  <div id="controls2">
+    <span class="glabel">tune</span>
+    <label title="0 keeps the whole Pearson corridor as a geography. 1 gives every cell the same feed and kill — one animal, no borders.">one climate
+      <input id="lock" type="range" min="0" max="1" step="0.01" value="0"><span id="lockv">atlas</span></label>
+    <label title="slides the feed/kill window along Pearson's pattern corridor. The span stays the same; which animals you get changes.">latitude
+      <input id="lat" type="range" min="-1" max="1" step="0.01" value="0"><span id="latv">0.00</span></label>
+  </div>
+  <div id="credit">Gray&ndash;Scott reaction&ndash;diffusion
+    <code>U + 2V → 3V</code>, feed F and kill k. Textbook applets pick one (F, k) and show one animal.
+    Here F increases east and k increases south, so the plate is a living slice of Pearson's 1993 map
+    &mdash; the interesting object is the <em>front</em> between climates, not any single pattern &middot;
+    <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
+  <details id="essay">
+    <summary>why this is interesting &mdash; philosophy &middot; technique &middot; aesthetics</summary>
+    <p><strong>Philosophy &mdash; the genome is two numbers, the animal is a place.</strong>
+      Alan Turing's 1952 paper on morphogenesis asked how an embryo gives itself spots without a
+      drawing of the spots. Two chemicals that activate and inhibit each other, diffusing at
+      different speeds, are enough: the same reaction that is uniform in a beaker becomes a skin
+      the moment it has room. Pearson later mapped which two numbers (feed, kill) produce which
+      skin &mdash; spots, worms, mazes, a boiling chaos, or nothing. This plate is that map made
+      flesh. Nothing about the chemicals changes from left to right except the climate they live
+      in, and the plate still divides into countries. A spotted nation shares a border with a
+      worm nation, and the border is itself alive: patterns try to invade, fail, or hybridise,
+      depending on which way the numbers tilt. Pull <em>one climate</em> and you are asking the
+      whole world to be one animal. It will try. Watch which country wins.</p>
+    <p><strong>Technique &mdash; Gray&ndash;Scott on a climate gradient.</strong> The local rule is
+      Pearson's:
+      <code>∂U/∂t = D<sub>u</sub>∇²U − UV² + F(1−U)</code>,
+      <code>∂V/∂t = D<sub>v</sub>∇²V + UV² − (F+k)V</code>,
+      with D<sub>u</sub>=0.16, D<sub>v</sub>=0.08, a five-point Laplacian, and Neumann shores so the
+      geography has edges rather than wrapping into a torus. What is not textbook is that F and k
+      are fields. Default window is F ∈ [0.018, 0.038], k ∈ [0.052, 0.063] &mdash; a rectangle
+      chosen by looking, not by formula, because it is the slice where four morphologies and a
+      desert all fit on one 192² plate. The gradient has to be slow next to a pattern wavelength
+      or you get soup; 192 cells is just enough for a few spots per climate. <em>Latitude</em>
+      translates that window along the corridor without changing its span.
+      <em>One climate</em> interpolates every cell toward the midpoint (F, k), which is how you
+      watch an atlas collapse into a specimen. Nuclei are scattered at seed so every climate that
+      can live, does; drag plants more.</p>
+    <p><strong>Aesthetics &mdash; hue is climate, ink is life.</strong> A Gray&ndash;Scott demo
+      usually paints V in one ramp, so a spotted world and a worm world look like the same
+      substance in different arrangements. Here hue is taken from the cell's own (F, k): sage in
+      the spotted west, gold through the worm belt, coral in the maze east. Brightness is V.
+      The empty corner is not a failed render: it is the homogeneous state, the fifth biome,
+      the climate where this reaction cannot make an animal. Switch to <em>ink</em> and the same geography becomes a lithograph: one
+      walnut on cream, climate told only by shape. The pixel scale is honest &mdash; nearest-neighbour
+      upscale, no blur. You are looking at the grid the chemicals live on.</p>
+  </details>
+</div>
+<script src="../lib/gifenc.js"></script>
+<script src="../lib/controls.js"></script>
+<script>
+'use strict';
+
+const N = 192;
+const DU = 0.16, DV = 0.08, DT = 1.0;
+const STEPS = 16;         // fast enough that the first ten seconds finish the atlas
+const BOOT = 400;         // blocking seed-expansion so the first paint isn't empty
+const F0 = 0.018, F1 = 0.038, K0 = 0.052, K1 = 0.063;
+const SPAN_F = F1 - F0, SPAN_K = K1 - K0;
+
+const U  = new Float32Array(N * N);
+const V  = new Float32Array(N * N);
+const Un = new Float32Array(N * N);
+const Vn = new Float32Array(N * N);
+const Ff = new Float32Array(N * N);
+const Kk = new Float32Array(N * N);
+
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+const off = document.createElement('canvas');
+off.width = N; off.height = N;
+const ox = off.getContext('2d');
+const img = ox.createImageData(N, N);
+const px = img.data;
+
+let pal = 'lichen';
+let lock = 0;
+let lat = 0;
+let dragging = false;
+
+function $(id) { return document.getElementById(id); }
+
+function climate() {
+  // lat slides the window along the corridor (both F and k together).
+  const f0 = F0 + lat * 0.006;
+  const k0 = K0 + lat * 0.004;
+  const fMid = f0 + 0.5 * SPAN_F;
+  const kMid = k0 + 0.5 * SPAN_K;
+  for (let y = 0; y < N; y++) {
+    const kn = y / (N - 1);
+    for (let x = 0; x < N; x++) {
+      const i = y * N + x;
+      const fn = x / (N - 1);
+      const fA = f0 + SPAN_F * fn;
+      const kA = k0 + SPAN_K * kn;
+      Ff[i] = fA + (fMid - fA) * lock;
+      Kk[i] = kA + (kMid - kA) * lock;
+    }
+  }
+}
+
+function blob(cx, cy, r) {
+  const r2 = r * r;
+  for (let y = cy - r; y <= cy + r; y++) {
+    if (y < 1 || y >= N - 1) continue;
+    for (let x = cx - r; x <= cx + r; x++) {
+      if (x < 1 || x >= N - 1) continue;
+      const d = (x - cx) * (x - cx) + (y - cy) * (y - cy);
+      if (d > r2) continue;
+      const i = y * N + x;
+      U[i] = 0.50;
+      V[i] = 0.25;
+    }
+  }
+}
+
+let seed = 0xC0FFEE;
+function rand() {
+  seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5;
+  return (seed >>> 0) / 4294967296;
+}
+
+function seedPlate(full) {
+  if (full) {
+    U.fill(1);
+    V.fill(0);
+    seed = (Math.random() * 0xffffffff) >>> 0;
+  }
+  for (let i = 0; i < N * N; i++) {
+    V[i] += 0.02 * rand();
+    U[i] -= 0.02 * rand();
+  }
+  const nBlobs = full ? 36 : 12;
+  for (let b = 0; b < nBlobs; b++) {
+    blob(4 + (rand() * (N - 8)) | 0, 4 + (rand() * (N - 8)) | 0, 3 + (rand() * 5) | 0);
+  }
+}
+
+function react() {
+  const n = N;
+  for (let y = 0; y < n; y++) {
+    const ym = y === 0 ? 0 : y - 1;
+    const yp = y === n - 1 ? n - 1 : y + 1;
+    const row = y * n, rowM = ym * n, rowP = yp * n;
+    for (let x = 0; x < n; x++) {
+      const i = row + x;
+      const xm = x === 0 ? 0 : x - 1;
+      const xp = x === n - 1 ? n - 1 : x + 1;
+      const u = U[i], v = V[i];
+      const lu = U[rowM + x] + U[rowP + x] + U[row + xm] + U[row + xp] - 4 * u;
+      const lv = V[rowM + x] + V[rowP + x] + V[row + xm] + V[row + xp] - 4 * v;
+      const uvv = u * v * v;
+      const f = Ff[i], k = Kk[i];
+      let un = u + (DU * lu - uvv + f * (1 - u)) * DT;
+      let vn = v + (DV * lv + uvv - (f + k) * v) * DT;
+      if (un < 0) un = 0; else if (un > 1) un = 1;
+      if (vn < 0) vn = 0; else if (vn > 1) vn = 1;
+      Un[i] = un; Vn[i] = vn;
+    }
+  }
+  U.set(Un); V.set(Vn);
+}
+
+function step() {
+  for (let s = 0; s < STEPS; s++) react();
+}
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function draw() {
+  const f0 = F0 + lat * 0.006, k0 = K0 + lat * 0.004;
+  for (let i = 0, p = 0; i < N * N; i++, p += 4) {
+    const v = V[i];
+    // Floor sits above the trivial V=0 desert and clips some of the smoother
+    // homogeneous V*. Remaining glow in the empty corner is that state, not a wash.
+    let ink = (v - 0.16) / 0.30;
+    if (ink < 0) ink = 0; else if (ink > 1) ink = 1;
+    ink = Math.pow(ink, 0.62);
+    const fn = (Ff[i] - f0) / SPAN_F;
+    const kn = (Kk[i] - k0) / SPAN_K;
+    let r, g, b;
+    if (pal === 'ink') {
+      r = lerp(245, 42, ink);
+      g = lerp(239, 28, ink);
+      b = lerp(226, 18, ink);
+    } else if (pal === 'ember') {
+      r = lerp(8, lerp(lerp(255, 236, fn), 255, kn), ink);
+      g = lerp(6, lerp(lerp(80, 170, fn), 90, kn), ink);
+      b = lerp(10, lerp(lerp(40, 60, fn), 50, kn), ink);
+    } else {
+      const sageR = 86, sageG = 168, sageB = 132;
+      const goldR = 236, goldG = 194, goldB = 86;
+      const boneR = 232, boneG = 220, boneB = 198;
+      const corR = 228, corG = 108, corB = 82;
+      const tR = lerp(lerp(sageR, goldR, fn), lerp(boneR, corR, fn), kn);
+      const tG = lerp(lerp(sageG, goldG, fn), lerp(boneG, corG, fn), kn);
+      const tB = lerp(lerp(sageB, goldB, fn), lerp(boneB, corB, fn), kn);
+      r = lerp(5, tR, ink);
+      g = lerp(8, tG, ink);
+      b = lerp(12, tB, ink);
+    }
+    px[p] = r; px[p + 1] = g; px[p + 2] = b; px[p + 3] = 255;
+  }
+  ox.putImageData(img, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(off, 0, 0, cv.width, cv.height);
+}
+
+function plantAt(cx, cy, radius) {
+  const r2 = radius * radius;
+  for (let y = cy - radius; y <= cy + radius; y++) {
+    if (y < 1 || y >= N - 1) continue;
+    for (let x = cx - radius; x <= cx + radius; x++) {
+      if (x < 1 || x >= N - 1) continue;
+      if ((x - cx) * (x - cx) + (y - cy) * (y - cy) > r2) continue;
+      const i = (y | 0) * N + (x | 0);
+      U[i] = 0.45;
+      V[i] = 0.30;
+    }
+  }
+}
+
+function canvasCell(e) {
+  const r = cv.getBoundingClientRect();
+  return [
+    (e.clientX - r.left) / r.width * N,
+    (e.clientY - r.top) / r.height * N
+  ];
+}
+
+cv.onpointerdown = e => {
+  dragging = true;
+  cv.setPointerCapture(e.pointerId);
+  const [x, y] = canvasCell(e);
+  plantAt(x, y, 4);
+};
+cv.onpointermove = e => {
+  if (!dragging) return;
+  const [x, y] = canvasCell(e);
+  plantAt(x, y, 3);
+};
+cv.onpointerup = () => { dragging = false; };
+
+$('pal').onchange = e => {
+  pal = e.target.value;
+  document.body.classList.toggle('paper', pal === 'ink');
+};
+$('lock').oninput = e => {
+  lock = +e.target.value;
+  $('lockv').textContent = lock < 0.03 ? 'atlas' : lock > 0.97 ? 'one' : lock.toFixed(2);
+  climate();
+};
+$('lat').oninput = e => {
+  lat = +e.target.value;
+  $('latv').textContent = lat.toFixed(2);
+  climate();
+};
+$('stir').onclick = () => seedPlate(false);
+$('reset').onclick = () => boot(true);
+
+let attached = false;
+function boot(full) {
+  climate();
+  seedPlate(full);
+  for (let t = 0; t < BOOT; t++) react();
+  if (!attached) {
+    attached = true;
+    SketchControls.attach({ canvas: cv, step, draw, ticksPerSecond: 30 });
+  }
+}
+boot(true);
+</script>
+</body>
+</html>

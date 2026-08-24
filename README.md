@@ -10,3 +10,4 @@ Small algorithmic-art sketches. Served at https://unforcedagi.github.io/sketches
 - [apparent-self](apparent-self/) — bearings in radial grooves on a wobbling platter; one creature from no coordination — after https://x.com/jechacas/status/2087701833653559567
 - [chimera](chimera/) — 700 identical ring oscillators splitting into a locked arc and a drifting one (Abrams–Strogatz)
 - [desire-paths](desire-paths/) — active-walker trail model (Helbing 1997): road networks worn into the ground by nobody in particular
+- [biome](biome/) — Gray–Scott as a geography of climates: one plate, many animals (Pearson 1993 map made flesh)
