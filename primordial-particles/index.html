@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Primordial Particles</title>
+<style>
+  html, body { margin: 0; min-height: 100%; background: #07060d; color: #cfc9da;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  #wrap { display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 16px; box-sizing: border-box; }
+  canvas { background: #07060d; border-radius: 10px; max-width: 100%;
+    cursor: crosshair; touch-action: none; }
+  #controls, #controls2 { display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+    justify-content: center; font-size: 12.5px; max-width: 800px; }
+  #controls2 { font-size: 11.5px; color: #8b8699; }
+  label { display: flex; gap: 6px; align-items: center; }
+  /* header: what this is, in one breath */
+  #head { width: 800px; max-width: 100%; margin: 2px 0 2px; }
+  #head h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.02em;
+    margin: 0; color: #e7dcf4; }
+  #tag { font-size: 12px; color: #8b8699; margin: 3px 0 0; line-height: 1.55; }
+  #try { font-size: 11.5px; color: #b4aec2; margin: 9px 0 0; line-height: 1.6;
+    border-left: 2px solid #4b3a6e; background: rgba(176, 130, 255, 0.06);
+    padding: 5px 10px; border-radius: 0 5px 5px 0; }
+  #try .lead { color: #7c6d95; text-transform: uppercase; letter-spacing: 0.09em;
+    font-size: 10px; margin-right: 4px; }
+  #try .k-blood { color: #ff9fc6; font-weight: 600; }
+  #try .k-beta { color: #9db7ff; font-weight: 600; }
+  /* faint group labels so the control strip reads in chunks */
+  .glabel { font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase;
+    color: #6b6679; }
+  .grp { display: inline-flex; gap: 8px; align-items: center; }
+  input[type=range] { width: 96px; accent-color: #a071d8; }
+  #controls input[type=range] { width: 78px; }
+  button { background: #16131f; color: #cfc9da; border: 1px solid #322c42;
+    border-radius: 6px; padding: 4px 12px; font: inherit; cursor: pointer; }
+  button:hover { background: #201b2c; }
+  #stats { color: #a99cc4; letter-spacing: 0.02em; }
+  #credit { font-size: 11px; color: #7d7890; max-width: 720px; text-align: center;
+    line-height: 1.65; }
+  a { color: #b98ce8; }
+  #essay { max-width: 660px; font-size: 12.5px; line-height: 1.7; color: #99939f;
+    margin-bottom: 26px; }
+  #essay summary { cursor: pointer; color: #7d7890; font-size: 11px; text-align: center; }
+  #essay p { margin: 12px 0; }
+  #essay strong { color: #ded3ea; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header id="head">
+    <h1>Primordial particles</h1>
+    <p id="tag">one line of motion law &mdash; turn by <code>&alpha;&nbsp;+&nbsp;&beta;N&nbsp;&middot;&nbsp;sign(R&nbsp;&minus;&nbsp;L)</code>,
+      then step forward &mdash; and structureless dust condenses into cells with nuclei and membranes
+      that feed, grow and divide. Each cell here also carries a <em>hue</em>: daughters inherit their
+      parent's colour, so you can watch heredity appear in a world with no genes.</p>
+    <p id="try"><span class="lead">try this first</span> just watch &mdash; every few seconds some
+      blob pinches at the waist and lets go of a daughter that keeps its colour, and a ring marks the
+      spot. Then hit <strong>scatter</strong> to slam the dish back to soup and watch cells
+      crystallise out of it in about five seconds.
+      <strong>Drag</strong> on the dish to pipette in fresh particles. Hit
+      <strong><span class="k-blood">one blood</span></strong> to repaint every family a single
+      colour &mdash; heredity has no backup copy &mdash; and watch new lineages diverge again
+      from drift alone. Then push
+      <span class="k-beta">&beta;</span> past 22 &mdash; every cell boils off into gas &mdash; and
+      drop it to 8, where they swarm but never grow up.</p>
+  </header>
+  <canvas id="c" width="800" height="600"></canvas>
+  <div id="controls">
+    <span class="grp">
+      <span class="glabel">law</span>
+      <label>&alpha; <input id="s-alpha" type="range" min="120" max="240" step="1" value="180"><span id="v-alpha">180&deg;</span></label>
+      <label>&beta; <input id="s-beta" type="range" min="2" max="40" step="0.5" value="17"><span id="v-beta">17&deg;</span></label>
+    </span>
+    <span class="grp">
+      <span class="glabel">dish</span>
+      <label>particles <input id="s-n" type="range" min="600" max="5000" step="20" value="2400"><span id="v-n">2400</span></label>
+      <button id="reroll">reroll</button>
+      <button id="scatter">scatter</button>
+    </span>
+  </div>
+  <div id="controls2">
+    <span class="grp">
+      <span class="glabel">tune</span>
+      <label>radius <input id="s-r" type="range" min="3" max="8" step="0.1" value="5"><span id="v-r">5.0</span></label>
+      <label>step <input id="s-v" type="range" min="0.2" max="1.4" step="0.01" value="0.67"><span id="v-v">0.67</span></label>
+      <label>hue drift <input id="s-drift" type="range" min="0" max="30" step="1" value="11"><span id="v-drift">11&deg;</span></label>
+    </span>
+    <span class="grp">
+      <span class="glabel">lineage</span>
+      <button id="blood" title="observer-only: repaint every living family one colour — the physics never notices; new lineages re-diverge by drift">one blood</button>
+      <span id="stats" title="division counts stand down for ~4 s after a physics slider moves — a hand on the dial cannot mint divisions. a contracting ring marks a lineage ending in a merger; an expanding one marks a division">&mdash;</span>
+    </span>
+  </div>
+  <div id="credit">the Primordial Particle System of Schmickl, Stefanec &amp; Crailsheim
+    (<a href="https://www.nature.com/articles/srep37969"><em>How a life-like system emerges from a
+    simple particle motion law</em>, Sci. Rep. 6:37969, 2016</a>): count your neighbours inside
+    <code>r</code>, turn <code>&alpha;&nbsp;+&nbsp;&beta;N&nbsp;&middot;&nbsp;sign(R&nbsp;&minus;&nbsp;L)</code>,
+    step <code>v</code> forward, wrap. The lineage colouring is this sketch's addition, not the
+    paper's &middot; <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
+  <details id="essay">
+    <summary>why this is interesting &mdash; philosophy &middot; technique &middot; aesthetics</summary>
+    <p><strong>Philosophy &mdash; heredity without genes.</strong> The motion law is the whole
+      organism. There is no membrane in the code, no nucleus, no metabolism, no notion of a cell at
+      all: a particle can only count how many others are within <code>r</code>, notice whether more
+      of them are to its left or its right, turn, and step. Everything you can name on screen &mdash;
+      the dense core, the ring of orbiters, the skin that keeps the free dust out, the pinch and the
+      release &mdash; is a description a viewer imposes on a rule that does not contain it. That is
+      the paper's claim, and it is strong enough on its own. What this sketch adds is the next
+      embarrassment. A cell here is not a thing; it is a temporarily-stable pattern of traffic, and
+      yet it has a genealogy. When a cell divides, both halves came from the same population of
+      particles, so the daughters really are descendants and not merely two new patterns that happen
+      to be adjacent. Give each cell a hue, pass it to the daughters with a small mutation, and a
+      lineage becomes visible as a colour family spreading across the dish: rose cells budding rose
+      cells, drifting toward coral over ten generations while a violet family holds the other corner.
+      Nothing is copied. There is no genome, no template, no error-correcting machinery &mdash; the
+      hue is bookkeeping this program does, not information the particles carry. And yet the thing it
+      is bookkeeping is real: descent with modification, in a substrate with no way to store a trait.
+      Once you have seen it here, "inheritance requires a replicator" starts to look like a claim
+      about efficiency rather than about possibility.</p>
+    <p><strong>Technique &mdash; the vote and the grid.</strong> The rule is
+      <code>&Delta;&phi;&nbsp;=&nbsp;&alpha;&nbsp;+&nbsp;&beta;N&nbsp;&middot;&nbsp;sign(R&nbsp;&minus;&nbsp;L)</code>
+      and every part of it is load-bearing. <code>&alpha;&nbsp;&asymp;&nbsp;180&deg;</code> makes a
+      lone particle reverse each tick, so empty space is a place where nothing goes anywhere &mdash;
+      it is the reason particles pool rather than disperse. The <code>sign</code> is a majority vote,
+      not a gradient: a particle turns toward its crowded side at full strength however slight the
+      majority, which is what sharpens a fuzzy density difference into a boundary. And
+      <code>&beta;N</code> makes the turn steeper the more crowded you are, so a core that gets too
+      dense spins its own members out &mdash; that is the size limit, and the size limit is what
+      forces division. Push <code>&beta;</code> past about 22&deg; and the correction overshoots so
+      hard that nothing can hold together at all. The cost is neighbour-counting: a uniform grid with
+      cells exactly <code>r</code> across, rebuilt every tick by counting sort into flat typed arrays,
+      with positions copied into cell-sorted order so the inner loop reads memory in a straight line
+      and the toroidal wrap is a per-cell offset instead of a per-pair branch. Updates are
+      synchronous &mdash; all turns computed from the same instant, then all moves applied &mdash;
+      because staggering them lets a particle react to its own influence and quietly changes the
+      physics. Lineage runs every thirtieth tick: union&ndash;find over particles above a density
+      threshold, then each cluster votes on which of last epoch's cells most of its members belonged
+      to &mdash; and a particle remembers its last cell for a couple of hundred ticks, so a cell that
+      momentarily frays does not lose its name. One cluster claiming one parent is the same cell
+      continuing. Two clusters claiming the same parent is a division: the larger daughter carries
+      the mother line's hue on unchanged, each bud takes it plus a drift. A cluster whose members
+      mostly remember nothing is a nucleation, and gets a fresh hue off a golden-angle sequence.
+      Merges fall out for free: the bigger parent wins the vote, the other lineage ends, and a
+      contracting ring in the absorbed family's colour marks where &mdash; death is the other half
+      of a family tree, and it gets the same one-ring honesty as birth.</p>
+    <p><strong>Aesthetics &mdash; darkfield, not diagram.</strong> The paper colours particles by
+      neighbour count in flat categorical steps, which is the right choice for a figure and the wrong
+      one here: it turns a living dish into a choropleth. This keeps density as the coding but spends
+      it on <em>light</em> &mdash; a particle's size, brightness and saturation all rise with how
+      crowded it is, so free dust is barely-there grey-violet, a membrane is a coloured mote, and a
+      nucleus is a handful of bright ones piled up until additive blending clips them to white. Hue
+      is then free to carry lineage, and the two channels never fight, because a cell's identity is
+      in its colour and its anatomy is in its glow. The palette is deliberately narrow &mdash; a
+      170&deg; arc from steel blue through violet and magenta to coral, on near-black indigo &mdash;
+      so that two related cells are recognisably related and two unrelated ones are unmistakably not,
+      which a full colour wheel destroys. The look is darkfield microscopy: nothing in a dish emits
+      light, but a stained one under the right optics appears to, and that appearance is exactly the
+      claim being made here, that these are organisms. A short motion trail keeps the orbiters
+      legible &mdash; particles jitter faster than the eye resolves, and without the smear a membrane
+      reads as noise instead of as a ring. The expanding ring at a division is the one piece of
+      annotation, and it earns its place: it is the moment the piece is about.</p>
+  </details>
+</div>
+<script src="../lib/gifenc.js"></script>
+<script src="../lib/controls.js"></script>
+<script>
+'use strict';
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+const S = 3.2;                       // canvas px per world unit
+const WW = W / S, WH = H / S;        // 250 x 187.5 toroidal world
+
+// one seedable PRNG for everything, so ?seed=… reproduces a dish exactly
+let _s = (Date.now() ^ 0x9e3779b9) >>> 0;
+function rnd() {
+  _s = (_s + 0x6d2b79f5) >>> 0;
+  let t = _s;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+// --- parameters -----------------------------------------------------------
+let ALPHA = 180;      // degrees: base turn. ~180 means a lone particle reverses
+let BETA  = 17;       // degrees per neighbour, signed by which side is busier
+let RAD   = 5;        // neighbourhood radius, world units
+let VEL   = 0.67;     // world units per tick
+let DRIFT = 8;        // degrees of hue mutation a daughter takes on division
+let N     = 2400;     // live particles — density is the master variable here
+
+const MAXN = 6600;
+const CORE_T  = 11;   // neighbours needed to count as cell interior
+const MEMB_T  = 6;    // neighbours needed to be adopted by an adjacent cell
+const MIN_CELL = 12;  // fewer particles than this is a clot, not a cell
+const CLUSTER_EVERY = 30;
+
+// --- particle state (flat typed arrays, no per-tick allocation) -----------
+const px = new Float32Array(MAXN), py = new Float32Array(MAXN);
+const ph = new Float32Array(MAXN), dph = new Float32Array(MAXN);
+const nb = new Int16Array(MAXN);
+const pcell = new Int32Array(MAXN);   // cell id right now, or -1 for free dust
+const pmem  = new Int32Array(MAXN);   // last cell this particle belonged to…
+const pmemT = new Int32Array(MAXN);   // …and when. identity survives a wobble
+const phue = new Float32Array(MAXN);  // rendered hue, degrees, lerped toward cell
+const MEM_TTL = 220;                  // ticks a particle remembers its cell
+
+// --- uniform grid ---------------------------------------------------------
+let gw = 1, gh = 1, cw = 1, chh = 1, nc = 1;
+let cnt = new Int32Array(1), gstart = new Int32Array(1), cur = new Int32Array(1);
+const items = new Int32Array(MAXN), cellOf = new Int32Array(MAXN);
+const sx = new Float32Array(MAXN), sy = new Float32Array(MAXN);
+
+function rebuildGrid() {
+  gw = Math.max(3, Math.floor(WW / RAD));
+  gh = Math.max(3, Math.floor(WH / RAD));
+  cw = WW / gw; chh = WH / gh; nc = gw * gh;
+  if (cnt.length < nc + 1) {
+    cnt = new Int32Array(nc + 1); gstart = new Int32Array(nc + 1); cur = new Int32Array(nc + 1);
+  }
+}
+
+function bin() {
+  cnt.fill(0, 0, nc);
+  for (let i = 0; i < N; i++) {
+    let gx = (px[i] / cw) | 0, gy = (py[i] / chh) | 0;
+    if (gx >= gw) gx = gw - 1; else if (gx < 0) gx = 0;
+    if (gy >= gh) gy = gh - 1; else if (gy < 0) gy = 0;
+    const c = gy * gw + gx; cellOf[i] = c; cnt[c]++;
+  }
+  let acc = 0;
+  for (let c = 0; c < nc; c++) { gstart[c] = acc; cur[c] = acc; acc += cnt[c]; }
+  gstart[nc] = acc;
+  for (let i = 0; i < N; i++) {
+    const k = cur[cellOf[i]]++;
+    items[k] = i; sx[k] = px[i]; sy[k] = py[i];
+  }
+}
+
+// --- lineage registry -----------------------------------------------------
+// ids are ever-increasing; the tables are ring buffers indexed by id & MASK.
+// a cell only ever looks up its own id or its immediate parent's, both of
+// which are at most one epoch old, so recycling is safe.
+const CAP = 8192, MASK = CAP - 1;
+const cellHue = new Float32Array(CAP);
+const cellRoot = new Int32Array(CAP);
+const cellGen = new Int16Array(CAP);
+let nextId = 0, hueSeq = 0.137;
+const HUE0 = 205, HUESPAN = 170;   // steel blue -> violet -> magenta -> coral
+
+function freshHue() {
+  hueSeq = (hueSeq + 0.6180339887498949) % 1;
+  return HUE0 + hueSeq * HUESPAN + (rnd() - 0.5) * 6;
+}
+function newCell(hue, root, gen) {
+  const id = nextId++, k = id & MASK;
+  cellHue[k] = ((hue % 360) + 360) % 360;
+  cellRoot[k] = root < 0 ? id : root;
+  cellGen[k] = gen;
+  return id;
+}
+
+// --- clustering scratch ---------------------------------------------------
+const uf = new Int32Array(MAXN);
+const comp = new Int32Array(MAXN);      // per-particle cluster index, -1 none
+const rootIdx = new Int32Array(MAXN), rootStamp = new Int32Array(MAXN);
+let stamp = 0;
+const CMAX = 4096;   // raw connected components, most of them single grains
+const cSize = new Int32Array(CMAX), cId = new Int32Array(CMAX);
+const cSx = new Float32Array(CMAX), cSy = new Float32Array(CMAX);
+const cCsx = new Float32Array(CMAX), cCsy = new Float32Array(CMAX);
+
+let nCells = 0, nLineages = 0, nSplits = 0, nBirths = 0;
+
+function ufind(a) { while (uf[a] !== a) { a = uf[a] = uf[uf[a]]; } return a; }
+
+// --- division markers (preallocated ring) ---------------------------------
+const MK = 48;
+const mkx = new Float32Array(MK), mky = new Float32Array(MK),
+      mkh = new Float32Array(MK), mka = new Float32Array(MK),
+      mkt = new Uint8Array(MK);         // 0 = division (expands), 1 = death (contracts)
+let mkw = 0;
+function marker(x, y, hue, type) {
+  mkx[mkw] = x; mky[mkw] = y; mkh[mkw] = hue; mka[mkw] = 1; mkt[mkw] = type || 0;
+  mkw = (mkw + 1) % MK;
+}
+
+// --- the motion law -------------------------------------------------------
+let tick = 0;
+// witness stand-down: while a physics slider is settling, multi-child groups
+// read as continuation + nucleation, never division — so no public control
+// can mint the event the piece offers as evidence
+let taintUntil = -1;
+
+function turns() {
+  const A = ALPHA * Math.PI / 180, B = BETA * Math.PI / 180;
+  const R2 = RAD * RAD;
+  for (let i = 0; i < N; i++) {
+    const x = px[i], y = py[i], a0 = ph[i];
+    const hx = Math.cos(a0), hy = Math.sin(a0);
+    const c0 = cellOf[i], gx = c0 % gw, gy = (c0 / gw) | 0;
+    let L = 0, R = 0;
+    for (let oy = -1; oy <= 1; oy++) {
+      let yy = gy + oy, dyo = 0;
+      if (yy < 0) { yy += gh; dyo = -WH; } else if (yy >= gh) { yy -= gh; dyo = WH; }
+      const row = yy * gw;
+      for (let ox = -1; ox <= 1; ox++) {
+        let xx = gx + ox, dxo = 0;
+        if (xx < 0) { xx += gw; dxo = -WW; } else if (xx >= gw) { xx -= gw; dxo = WW; }
+        const c = row + xx;
+        for (let k = gstart[c], e = gstart[c + 1]; k < e; k++) {
+          const dx = sx[k] + dxo - x, dy = sy[k] + dyo - y;
+          if (dx * dx + dy * dy > R2) continue;
+          if (hx * dy - hy * dx > 0) L++; else R++;
+        }
+      }
+    }
+    R--;                       // self sits at distance 0, cross product 0 -> R
+    const n = L + R;
+    nb[i] = n;
+    dph[i] = A + B * n * (R > L ? 1 : (R < L ? -1 : 0));
+  }
+}
+
+function move() {
+  const TAU = Math.PI * 2;
+  for (let i = 0; i < N; i++) {
+    let a = ph[i] + dph[i];
+    a %= TAU; if (a < 0) a += TAU;
+    ph[i] = a;
+    let x = px[i] + Math.cos(a) * VEL, y = py[i] + Math.sin(a) * VEL;
+    if (x < 0) x += WW; else if (x >= WW) x -= WW;
+    if (y < 0) y += WH; else if (y >= WH) y -= WH;
+    px[i] = x; py[i] = y;
+  }
+}
+
+// hue relaxation: a particle drifts toward the hue of whatever cell it is in,
+// so a particle captured by a neighbouring cell visibly changes allegiance
+function hues() {
+  for (let i = 0; i < N; i++) {
+    const c = pcell[i];
+    if (c < 0) continue;
+    const t = cellHue[c & MASK];
+    let d = t - phue[i];
+    d -= Math.floor(d / 360 + 0.5) * 360;   // shortest way round the circle
+    let h = phue[i] + d * 0.09;
+    if (h < 0) h += 360; else if (h >= 360) h -= 360;
+    phue[i] = h;
+  }
+}
+
+// --- lineage: cluster, vote, inherit --------------------------------------
+function cluster() {
+  const R2 = RAD * RAD;
+  // cores are linked at rather less than r: two cells that merely brush past
+  // each other should not read as one, or every collision looks like a merger
+  const L2 = R2 * 0.55;
+  for (let i = 0; i < N; i++) { uf[i] = i; comp[i] = -1; }
+
+  // union core particles that are within r of each other
+  for (let k = 0; k < N; k++) {
+    const i = items[k];
+    if (nb[i] < CORE_T) continue;
+    const x = sx[k], y = sy[k];
+    const c0 = cellOf[i], gx = c0 % gw, gy = (c0 / gw) | 0;
+    for (let oy = -1; oy <= 1; oy++) {
+      let yy = gy + oy, dyo = 0;
+      if (yy < 0) { yy += gh; dyo = -WH; } else if (yy >= gh) { yy -= gh; dyo = WH; }
+      const row = yy * gw;
+      for (let ox = -1; ox <= 1; ox++) {
+        let xx = gx + ox, dxo = 0;
+        if (xx < 0) { xx += gw; dxo = -WW; } else if (xx >= gw) { xx -= gw; dxo = WW; }
+        const c = row + xx;
+        for (let k2 = gstart[c], e = gstart[c + 1]; k2 < e; k2++) {
+          if (k2 <= k) continue;                       // each pair once
+          const j = items[k2];
+          if (nb[j] < CORE_T) continue;
+          const dx = sx[k2] + dxo - x, dy = sy[k2] + dyo - y;
+          if (dx * dx + dy * dy > L2) continue;
+          const ra = ufind(i), rb = ufind(j);
+          if (ra !== rb) uf[ra] = rb;
+        }
+      }
+    }
+  }
+
+  // compact roots into cluster indices, accumulate size + toroidal centroid
+  stamp++;
+  let m = 0;
+  const kx = Math.PI * 2 / WW, ky = Math.PI * 2 / WH;
+  for (let i = 0; i < N; i++) {
+    if (nb[i] < CORE_T) continue;
+    const r = ufind(i);
+    let ci;
+    if (rootStamp[r] === stamp) ci = rootIdx[r];
+    else {
+      if (m >= CMAX) continue;
+      ci = m++; rootStamp[r] = stamp; rootIdx[r] = ci;
+      cSize[ci] = 0; cSx[ci] = 0; cSy[ci] = 0; cCsx[ci] = 0; cCsy[ci] = 0;
+    }
+    comp[i] = ci;
+    cSize[ci]++;
+    const ax = px[i] * kx, ay = py[i] * ky;
+    cCsx[ci] += Math.cos(ax); cSx[ci] += Math.sin(ax);
+    cCsy[ci] += Math.cos(ay); cSy[ci] += Math.sin(ay);
+  }
+
+  // drop clots: too small to be a cell
+  const alive = new Int8Array(m);
+  let live = 0;
+  for (let ci = 0; ci < m; ci++) if (cSize[ci] >= MIN_CELL) { alive[ci] = 1; live++; }
+  for (let i = 0; i < N; i++) if (comp[i] >= 0 && !alive[comp[i]]) comp[i] = -1;
+
+  // adopt the membrane: a merely-crowded particle joins the nearest core
+  for (let k = 0; k < N; k++) {
+    const i = items[k];
+    if (comp[i] >= 0 || nb[i] < MEMB_T) continue;
+    const x = sx[k], y = sy[k];
+    const c0 = cellOf[i], gx = c0 % gw, gy = (c0 / gw) | 0;
+    let best = -1, bd = R2;
+    for (let oy = -1; oy <= 1; oy++) {
+      let yy = gy + oy, dyo = 0;
+      if (yy < 0) { yy += gh; dyo = -WH; } else if (yy >= gh) { yy -= gh; dyo = WH; }
+      const row = yy * gw;
+      for (let ox = -1; ox <= 1; ox++) {
+        let xx = gx + ox, dxo = 0;
+        if (xx < 0) { xx += gw; dxo = -WW; } else if (xx >= gw) { xx -= gw; dxo = WW; }
+        const c = row + xx;
+        for (let k2 = gstart[c], e = gstart[c + 1]; k2 < e; k2++) {
+          const j = items[k2];
+          if (nb[j] < CORE_T || comp[j] < 0) continue;
+          const dx = sx[k2] + dxo - x, dy = sy[k2] + dyo - y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < bd) { bd = d2; best = comp[j]; }
+        }
+      }
+    }
+    if (best >= 0) { comp[i] = best; cSize[best]++; }
+  }
+
+  // vote: which of last epoch's cells does each cluster mostly consist of?
+  const votes = [];
+  for (let ci = 0; ci < m; ci++) votes.push(alive[ci] ? new Map() : null);
+  const total = new Int32Array(m);
+  const cutoff = tick - MEM_TTL;
+  for (let i = 0; i < N; i++) {
+    const ci = comp[i];
+    if (ci < 0) continue;
+    total[ci]++;
+    const p = pmem[i];
+    if (p < 0 || pmemT[i] < cutoff) continue;
+    const v = votes[ci];
+    v.set(p, (v.get(p) || 0) + 1);
+  }
+
+  const parentOf = new Int32Array(m).fill(-1);
+  for (let ci = 0; ci < m; ci++) {
+    if (!alive[ci]) continue;
+    let bp = -1, bv = 0;
+    for (const [p, v] of votes[ci]) if (v > bv) { bv = v; bp = p; }
+    // a cluster mostly made of free dust is a nucleation, not a descendant
+    if (bp >= 0 && bv >= Math.max(6, total[ci] * 0.25)) parentOf[ci] = bp;
+  }
+
+  // group children by parent: 1 child continues, 2+ is a division
+  const kids = new Map();
+  for (let ci = 0; ci < m; ci++) {
+    if (!alive[ci]) continue;
+    const p = parentOf[ci];
+    if (p < 0) continue;
+    const a = kids.get(p);
+    if (a) a.push(ci); else kids.set(p, [ci]);
+  }
+
+  for (let ci = 0; ci < m; ci++) {
+    if (!alive[ci]) continue;
+    const p = parentOf[ci];
+    if (p < 0) { cId[ci] = newCell(freshHue(), -1, 0); nBirths++; continue; }
+    const sibs = kids.get(p);
+    if (sibs.length === 1) { cId[ci] = p; continue; }   // same cell, continuing
+    if (tick < taintUntil) {
+      // the witness is standing down: largest fragment keeps the name; the
+      // rest keep the family's hue, root and generation but claim nothing —
+      // no division, no birth, no ring, no minted colour. an undercount,
+      // never an overcount, and no new heredity a hand could have faked
+      sibs.sort((a, b) => cSize[b] - cSize[a]);
+      if (sibs.indexOf(ci) === 0) { cId[ci] = p; continue; }
+      const pk0 = p & MASK;
+      cId[ci] = newCell(cellHue[pk0], cellRoot[pk0], cellGen[pk0]);
+      continue;
+    }
+    // division: the larger daughter holds the mother line's hue, each bud
+    // takes it plus a drift — so a family fans out over its generations
+    sibs.sort((a, b) => cSize[b] - cSize[a]);
+    const idx = sibs.indexOf(ci);
+    const d = idx === 0 ? (rnd() - 0.5) * 3 : (rnd() < 0.5 ? -DRIFT : DRIFT);
+    const pk = p & MASK;
+    cId[ci] = newCell(cellHue[pk] + d, cellRoot[pk], cellGen[pk] + 1);
+    if (idx === 0) nSplits++;
+    let cx = Math.atan2(cSx[ci] / cSize[ci], cCsx[ci] / cSize[ci]) / kx;
+    let cy = Math.atan2(cSy[ci] / cSize[ci], cCsy[ci] / cSize[ci]) / ky;
+    if (cx < 0) cx += WW; if (cy < 0) cy += WH;
+    marker(cx, cy, cellHue[cId[ci] & MASK]);
+  }
+
+  // mergers: a remembered lineage that fed real votes into a surviving
+  // cluster but is claimed by no cluster this epoch was absorbed — its
+  // family ended. mark it with a contracting ring in the absorbed colour,
+  // at the absorber's centroid. suppressed during the stand-down like every
+  // other lineage claim.
+  if (tick >= taintUntil) {
+    const marked = new Set();
+    for (let ci = 0; ci < m; ci++) {
+      if (!alive[ci]) continue;
+      for (const [p, v] of votes[ci]) {
+        if (p === parentOf[ci] || kids.has(p) || marked.has(p)) continue;
+        if (v < Math.max(6, total[ci] * 0.25)) continue;
+        marked.add(p);
+        let cx = Math.atan2(cSx[ci] / cSize[ci], cCsx[ci] / cSize[ci]) / kx;
+        let cy = Math.atan2(cSy[ci] / cSize[ci], cCsy[ci] / cSize[ci]) / ky;
+        if (cx < 0) cx += WW; if (cy < 0) cy += WH;
+        marker(cx, cy, cellHue[p & MASK], 1);
+      }
+    }
+  }
+
+  // commit membership
+  for (let i = 0; i < N; i++) {
+    const ci = comp[i];
+    if (ci < 0) { pcell[i] = -1; continue; }
+    pcell[i] = pmem[i] = cId[ci];
+    pmemT[i] = tick;
+  }
+
+  // stats: distinct founders still represented on the dish
+  const roots = new Set();
+  for (let ci = 0; ci < m; ci++) if (alive[ci]) roots.add(cellRoot[cId[ci] & MASK]);
+  nCells = live; nLineages = roots.size;
+  if (statsEl) {
+    statsEl.textContent = `${nCells} cells · ${nLineages} lineages · ` +
+      `${nSplits} divisions · ${nBirths} nucleations`;
+  }
+}
+
+function step() {
+  rebuildGrid();
+  bin();
+  turns();
+  if (tick % CLUSTER_EVERY === 0) cluster();
+  hues();
+  move();
+  for (let k = 0; k < MK; k++) if (mka[k] > 0) mka[k] -= 0.022;
+  tick++;
+}
+
+// --- sprites: hue x density, prebuilt -------------------------------------
+// density buys size, brightness and saturation; hue is left free to carry
+// lineage, so the two channels never fight for the same pixels.
+const HB = 72;                                  // hue bins, 5 degrees apart
+const TIER = [
+  { r: 2.2, s: 30, l: 21, a: 0.55 },            // free dust
+  { r: 2.7, s: 48, l: 33, a: 0.72 },            // loose crowd
+  { r: 3.3, s: 70, l: 45, a: 0.85 },            // membrane
+  { r: 4.1, s: 82, l: 56, a: 0.95 },            // inner shell
+  { r: 5.0, s: 76, l: 68, a: 1.00 },            // nucleus
+];
+const sprite = [], spHalf = [];
+(function buildSprites() {
+  for (let t = 0; t < TIER.length; t++) {
+    const T = TIER[t], size = Math.ceil(T.r * 2) + 2, h2 = size / 2;
+    spHalf.push(h2);
+    for (let hb = 0; hb < HB; hb++) {
+      const hue = hb * (360 / HB);
+      const c = document.createElement('canvas');
+      c.width = c.height = size;
+      const x = c.getContext('2d');
+      const g = x.createRadialGradient(h2, h2, 0, h2, h2, T.r);
+      const col = (l, a) => `hsla(${hue}, ${T.s}%, ${l}%, ${a})`;
+      g.addColorStop(0, col(Math.min(90, T.l + 17), T.a));
+      g.addColorStop(0.42, col(T.l, T.a * 0.72));
+      g.addColorStop(1, col(T.l, 0));
+      x.fillStyle = g;
+      x.fillRect(0, 0, size, size);
+      sprite.push(c);
+    }
+  }
+})();
+function tierOf(n) { return n < 4 ? 0 : n < 9 ? 1 : n < 13 ? 2 : n < 17 ? 3 : 4; }
+
+// --- ground ---------------------------------------------------------------
+const baseC = document.createElement('canvas');
+baseC.width = 400; baseC.height = 300;
+const baseCtx = baseC.getContext('2d');
+function noiseGrid(n) {
+  const a = new Float32Array((n + 1) * (n + 1));
+  for (let i = 0; i < a.length; i++) a[i] = rnd();
+  return a;
+}
+function sampleGrid(a, n, u, v) {
+  const X = u * n, Y = v * n;
+  let ix = X | 0, iy = Y | 0;
+  if (ix > n - 1) ix = n - 1;
+  if (iy > n - 1) iy = n - 1;
+  const fx = X - ix, fy = Y - iy;
+  const sx2 = fx * fx * (3 - 2 * fx), sy2 = fy * fy * (3 - 2 * fy);
+  const i = iy * (n + 1) + ix, j = i + n + 1;
+  const a0 = a[i] + (a[i + 1] - a[i]) * sx2;
+  const a1 = a[j] + (a[j + 1] - a[j]) * sx2;
+  return a0 + (a1 - a0) * sy2;
+}
+function buildBase() {
+  const BW = baseC.width, BH = baseC.height;
+  const oct = [[3, 0.52], [8, 0.26], [19, 0.14], [41, 0.08]]
+    .map(([n, amp]) => [noiseGrid(n), n, amp]);
+  const im = baseCtx.createImageData(BW, BH), d = im.data;
+  for (let y = 0, p = 0; y < BH; y++) {
+    const v = y / BH;
+    for (let x = 0; x < BW; x++, p += 4) {
+      const u = x / BW;
+      let s = 0;
+      for (const [a, n, amp] of oct) s += sampleGrid(a, n, u, v) * amp;
+      const t = Math.min(1, Math.max(0, (s - 0.30) / 0.46));
+      const dx = (u - 0.5) * 2, dy = (v - 0.5) * 2;
+      const vg = 1 - 0.42 * Math.min(1, (dx * dx * 0.85 + dy * dy) * 0.62);
+      const grain = (rnd() - 0.5) * 3.4;
+      d[p]     = (7 + t * 9) * vg + grain;
+      d[p + 1] = (6 + t * 6) * vg + grain;
+      d[p + 2] = (13 + t * 16) * vg + grain;
+      d[p + 3] = 255;
+    }
+  }
+  baseCtx.putImageData(im, 0, 0);
+}
+
+// --- render surfaces ------------------------------------------------------
+const off = document.createElement('canvas');
+off.width = W; off.height = H;
+const offCtx = off.getContext('2d');
+const b1 = document.createElement('canvas');
+b1.width = W >> 1; b1.height = H >> 1;
+const b1Ctx = b1.getContext('2d');
+const b2 = document.createElement('canvas');
+b2.width = W >> 3; b2.height = H >> 3;
+const b2Ctx = b2.getContext('2d');
+
+const EDGE = 8;   // px within which a sprite is also drawn on the far side
+
+function draw() {
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(baseC, 0, 0, W, H);
+
+  // short persistence: the jitter is faster than the eye, and without a smear
+  // an orbiting membrane reads as noise rather than as a ring
+  offCtx.globalCompositeOperation = 'destination-out';
+  offCtx.fillStyle = 'rgba(0,0,0,0.62)';
+  offCtx.fillRect(0, 0, W, H);
+  offCtx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < N; i++) {
+    const t = tierOf(nb[i]);
+    const sp = sprite[t * HB + ((phue[i] * (HB / 360)) | 0) % HB];
+    const h2 = spHalf[t];
+    const x = px[i] * S - h2, y = py[i] * S - h2;
+    offCtx.drawImage(sp, x, y);
+    // toroidal: a cell straddling the seam should not be cut in half
+    const wx = x < EDGE ? x + W : (x > W - EDGE ? x - W : null);
+    const wy = y < EDGE ? y + H : (y > H - EDGE ? y - H : null);
+    if (wx !== null) offCtx.drawImage(sp, wx, y);
+    if (wy !== null) offCtx.drawImage(sp, x, wy);
+    if (wx !== null && wy !== null) offCtx.drawImage(sp, wx, wy);
+  }
+
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.drawImage(off, 0, 0);
+
+  b1Ctx.globalCompositeOperation = 'copy';
+  b1Ctx.drawImage(off, 0, 0, b1.width, b1.height);
+  b2Ctx.globalCompositeOperation = 'copy';
+  b2Ctx.drawImage(b1, 0, 0, b2.width, b2.height);
+  ctx.globalAlpha = 0.34; ctx.drawImage(b1, 0, 0, W, H);
+  ctx.globalAlpha = 0.15; ctx.drawImage(b2, 0, 0, W, H);
+  ctx.globalAlpha = 1;
+
+  // rings — the only annotation, and the moments it is about: a division ring
+  // expands from the pinch; a death ring contracts in the absorbed family's
+  // colour, so the end of a lineage is as visible as its beginning
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.lineWidth = 1.2;
+  for (let k = 0; k < MK; k++) {
+    const a = mka[k];
+    if (a <= 0) continue;
+    const dying = mkt[k] === 1;
+    const rr = (dying ? 14 + a * 26 : 14 + (1 - a) * 26) * (S / 3.2);
+    ctx.strokeStyle = dying
+      ? `hsla(${mkh[k]}, 55%, 58%, ${a * 0.45})`
+      : `hsla(${mkh[k]}, 80%, 74%, ${a * 0.5})`;
+    ctx.beginPath();
+    ctx.arc(mkx[k] * S, mky[k] * S, rr, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+// --- seeding and interaction ---------------------------------------------
+function seedParticle(i, x, y) {
+  px[i] = x; py[i] = y; ph[i] = rnd() * Math.PI * 2;
+  dph[i] = 0; nb[i] = 0; pcell[i] = -1; pmem[i] = -1; pmemT[i] = -1e9;
+  phue[i] = HUE0 + rnd() * HUESPAN;
+}
+function scatterAll() {
+  for (let i = 0; i < N; i++) seedParticle(i, rnd() * WW, rnd() * WH);
+  for (let k = 0; k < MK; k++) mka[k] = 0;
+  tick = 0; nextId = 0; nSplits = 0; nBirths = 0;
+  taintUntil = -1;   // fresh dish, fresh witness — no leftover stand-down
+}
+function setN(n) {
+  n = Math.max(50, Math.min(MAXN, n | 0));
+  // shrinking slices off random indices and can leave two remnant cores of
+  // one cell, which would later count as a real division — stand the witness
+  // down. growth only adds memoryless dust and needs no taint.
+  if (n < N) taintUntil = tick + MEM_TTL;
+  for (let i = N; i < n; i++) seedParticle(i, rnd() * WW, rnd() * WH);
+  N = n;
+  if (sN) { sN.value = N; vN.textContent = N; }
+}
+function inject(x, y, k) {
+  for (let q = 0; q < k && N < MAXN; q++) {
+    const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * 4.5;
+    let ix = x + Math.cos(a) * d, iy = y + Math.sin(a) * d;
+    if (ix < 0) ix += WW; else if (ix >= WW) ix -= WW;
+    if (iy < 0) iy += WH; else if (iy >= WH) iy -= WH;
+    seedParticle(N, ix, iy);
+    N++;
+  }
+  if (sN) { sN.value = Math.min(+sN.max, N); vN.textContent = N; }
+}
+function evtWorld(e) {
+  const r = cv.getBoundingClientRect();
+  return [(e.clientX - r.left) * (cv.width / r.width) / S,
+          (e.clientY - r.top) * (cv.height / r.height) / S];
+}
+let down = false;
+cv.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  cv.setPointerCapture(e.pointerId);
+  const [x, y] = evtWorld(e);
+  down = true;
+  inject(x, y, 14);
+});
+cv.addEventListener('pointermove', e => {
+  if (!down) return;
+  const [x, y] = evtWorld(e);
+  inject(x, y, 7);
+});
+cv.addEventListener('pointerup', () => { down = false; });
+cv.addEventListener('pointercancel', () => { down = false; });
+
+// --- warm-up --------------------------------------------------------------
+// the zero-interaction view must already be alive, so the dish is run forward
+// before the first paint: cells are well formed by a few hundred ticks
+function warmUp(n) { for (let i = 0; i < n; i++) step(); }
+
+function freshDish(rollGround) {
+  if (rollGround) buildBase();
+  scatterAll();
+  offCtx.clearRect(0, 0, W, H);
+  warmUp(1000);
+}
+
+// --- UI -------------------------------------------------------------------
+const $ = id => document.getElementById(id);
+const statsEl = $('stats'), sN = $('s-n'), vN = $('v-n');
+
+// deep links: ?seed=..&n=..&alpha=..&beta=..&r=..&v=..&drift=..
+(function readQuery() {
+  const q = new URLSearchParams(location.search);
+  const num = (k, d) => (q.has(k) && isFinite(+q.get(k)) ? +q.get(k) : d);
+  if (q.has('seed')) _s = (Math.imul(+q.get('seed') | 0, 0x9e3779b1) ^ 0x85ebca6b) >>> 0;
+  ALPHA = num('alpha', ALPHA);
+  BETA  = num('beta', BETA);
+  RAD   = num('r', RAD);
+  VEL   = num('v', VEL);
+  DRIFT = num('drift', DRIFT);
+  N     = Math.max(50, Math.min(MAXN, Math.round(num('n', N))));
+  $('s-alpha').value = ALPHA; $('v-alpha').textContent = ALPHA + '°';
+  $('s-beta').value = BETA;   $('v-beta').textContent = BETA + '°';
+  $('s-r').value = RAD;       $('v-r').textContent = RAD.toFixed(1);
+  $('s-v').value = VEL;       $('v-v').textContent = VEL.toFixed(2);
+  $('s-drift').value = DRIFT; $('v-drift').textContent = DRIFT + '°';
+  sN.value = Math.min(+sN.max, N); vN.textContent = N;
+})();
+const taint = () => { taintUntil = tick + MEM_TTL; };
+$('s-alpha').oninput = e => { ALPHA = +e.target.value; $('v-alpha').textContent = ALPHA + '°'; taint(); };
+$('s-beta').oninput  = e => { BETA = +e.target.value; $('v-beta').textContent = BETA + '°'; taint(); };
+$('s-r').oninput     = e => { RAD = +e.target.value; $('v-r').textContent = RAD.toFixed(1); taint(); };
+$('s-v').oninput     = e => { VEL = +e.target.value; $('v-v').textContent = VEL.toFixed(2); taint(); };
+$('s-drift').oninput = e => { DRIFT = +e.target.value; $('v-drift').textContent = DRIFT + '°'; };
+sN.oninput = e => setN(+e.target.value);
+$('reroll').onclick = () => freshDish(true);
+$('scatter').onclick = () => { scatterAll(); offCtx.clearRect(0, 0, W, H); };
+$('blood').onclick = () => {
+  // observer-only: collapse every living family to the dominant cell's colour.
+  // membership, physics and motion are untouched; daughters re-diverge by drift.
+  const size = new Map();
+  for (let i = 0; i < N; i++) { const c = pcell[i]; if (c >= 0) size.set(c, (size.get(c) || 0) + 1); }
+  let big = -1, bn = 0;
+  for (const [c, n] of size) if (n > bn) { bn = n; big = c; }
+  if (big < 0) return;
+  const h0 = cellHue[big & MASK], r0 = cellRoot[big & MASK];
+  for (const c of size.keys()) {
+    const k = c & MASK;
+    cellHue[k] = h0; cellRoot[k] = r0; cellGen[k] = 0;
+  }
+};
+
+freshDish(true);
+SketchControls.attach({ canvas: cv, step, draw, ticksPerSecond: 60 });
+
+// headless hook (harmless in a browser)
+window.__pps = {
+  tick: () => tick,
+  stats: () => ({ tick, N, cells: nCells, lineages: nLineages,
+                  splits: nSplits, births: nBirths }),
+  // every live cell's id, hue, founder and generation — the lineage evidence
+  cells: () => {
+    const seen = new Map();
+    for (let i = 0; i < N; i++) {
+      const c = pcell[i];
+      if (c < 0) continue;
+      if (!seen.has(c)) seen.set(c, { id: c, hue: +cellHue[c & MASK].toFixed(1),
+        root: cellRoot[c & MASK], gen: cellGen[c & MASK], n: 0 });
+      seen.get(c).n++;
+    }
+    return [...seen.values()].sort((a, b) => b.n - a.n);
+  },
+};
+</script>
+</body>
+</html>

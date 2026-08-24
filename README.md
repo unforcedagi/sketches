@@ -13,3 +13,4 @@ Small algorithmic-art sketches. Served at https://unforcedagi.github.io/sketches
 - [desire-paths](desire-paths/) — active-walker trail model (Helbing 1997): road networks worn into the ground by nobody in particular
 - [biome](biome/) — Gray–Scott as a geography of climates: one plate, many animals (Pearson 1993 map made flesh)
 - [chladni](chladni/) — dust settles where the plate is still; two notes at once, the figure is the silence they share
+- [primordial-particles](primordial-particles/) — Schmickl PPS: one motion law grows dividing cells; lineage hues make heredity visible without genes
