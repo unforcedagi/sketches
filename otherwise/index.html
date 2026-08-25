@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Otherwise</title>
+<style>
+  html, body { margin: 0; min-height: 100%; background: #0c0b10; color: #d4cfc6;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  #wrap { display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 16px; box-sizing: border-box; }
+  canvas { background: #0c0b10; border-radius: 10px; max-width: 100%;
+    cursor: crosshair; image-rendering: pixelated; touch-action: none; }
+  #controls, #controls2 { display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    justify-content: center; font-size: 12.5px; max-width: 740px; }
+  #controls2 { font-size: 11.5px; color: #8a8378; }
+  label { display: flex; gap: 6px; align-items: center; }
+  #head { width: 720px; max-width: 100%; margin: 2px 0 2px; }
+  #head h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.02em;
+    margin: 0; color: #efe8dc; }
+  #tag { font-size: 12px; color: #8f877c; margin: 3px 0 0; line-height: 1.55; }
+  #try { font-size: 11.5px; color: #b7b09f; margin: 9px 0 0; line-height: 1.6;
+    border-left: 2px solid #6a4a3a; background: rgba(200, 140, 80, 0.05);
+    padding: 5px 10px; border-radius: 0 5px 5px 0; }
+  #try .lead { color: #6f675c; text-transform: uppercase; letter-spacing: 0.09em;
+    font-size: 10px; margin-right: 4px; }
+  #try .k-click { color: #e0b56a; font-weight: 600; }
+  #try .k-lean { color: #7fc6a0; font-weight: 600; }
+  #try .k-map { color: #bd8ee8; font-weight: 600; }
+  .glabel { font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase;
+    color: #5c564c; }
+  .grp { display: inline-flex; gap: 8px; align-items: center; }
+  input[type=range] { width: 96px; accent-color: #c9a57a; }
+  button { background: #1a1714; color: #d4cfc6; border: 1px solid #3a342c;
+    border-radius: 6px; padding: 4px 11px; font: inherit; cursor: pointer; }
+  button:hover { background: #26221c; }
+  button.on { background: #2a2620; border-color: #c9a57a; color: #efe8dc; }
+  select { background: #1a1714; color: #d4cfc6; border: 1px solid #3a342c;
+    border-radius: 6px; padding: 3px 6px; font: inherit; }
+  #credit { font-size: 11px; color: #746d62; max-width: 700px; text-align: center;
+    line-height: 1.65; }
+  a { color: #c4a574; }
+  #essay { max-width: 660px; font-size: 12.5px; line-height: 1.7; color: #9a9286;
+    margin-bottom: 26px; }
+  #essay summary { cursor: pointer; color: #746d62; font-size: 11px; text-align: center; }
+  #essay p { margin: 12px 0; }
+  #essay strong { color: #e4ddd0; }
+  #essay em { color: #c2b394; font-style: normal; }
+  #stats { font-size: 11px; color: #6f675c; min-width: 14ch; }
+  body.paper { background: #f3eee4; color: #2c261f; }
+  body.paper canvas { background: #faf7f0; }
+  body.paper button, body.paper select { background: #ebe5d8; color: #2c261f; border-color: #c9bfae; }
+  body.paper button.on { background: #ddd4c2; border-color: #8a5a22; }
+  body.paper #head h1 { color: #241e17; }
+  body.paper #tag { color: #7d7365; }
+  body.paper #try { color: #4c443a; border-left-color: #c1b49c; background: rgba(120,96,60,0.07); }
+  body.paper #try .lead { color: #9a8f7c; }
+  body.paper #try .k-click { color: #8a5a22; }
+  body.paper #try .k-lean { color: #3d6b52; }
+  body.paper #try .k-map { color: #6b4a8a; }
+  body.paper .glabel, body.paper #controls2, body.paper #stats { color: #a2977f; }
+  body.paper #credit, body.paper #essay summary { color: #8d8272; }
+  body.paper #essay { color: #4c443a; }
+  body.paper #essay strong { color: #241e17; }
+  body.paper a { color: #7a5c33; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header id="head">
+    <h1>Otherwise</h1>
+    <p id="tag">a walk that takes every turn it didn&rsquo;t. every walk ends; the drawing
+      is what it leaves.</p>
+    <p id="try"><span class="lead">try this first</span> watch one line enter, fork, and
+      finish. The stats will say so. Then <span class="k-click">click</span> to start
+      another walk on the same paper, or wait &mdash; after a few breaths a new walk begins.
+      Hold and the otherwise <span class="k-lean">leans</span>. Hold
+      <span class="k-map">X</span> to colour depth.</p>
+  </header>
+  <canvas id="c" width="720" height="720"></canvas>
+  <div id="controls">
+    <span class="grp">
+      <span class="glabel">look</span>
+      <select id="pal" title="ink on paper, or filaments on black">
+        <option value="ink">ink</option>
+        <option value="gold">gold</option>
+      </select>
+      <span id="stats">&mdash;</span>
+    </span>
+    <span class="grp">
+      <span class="glabel">run</span>
+      <button id="still" title="freeze the tips; the ink stays">still</button>
+      <button id="reset" title="clear the paper; one walk from an edge, pointing in">reset</button>
+    </span>
+  </div>
+  <div id="controls2">
+    <span class="glabel">tune</span>
+    <label title="how freely a tip wanders. high wander turns the thicket into weather.">wander
+      <input id="wander" type="range" min="0" max="40" value="10"><span id="wanderv">0.10</span></label>
+    <label title="chance a live tip forks this tick, after a short trunk. both outgoing tips take generation g+1; the parent ends.">split
+      <input id="split" type="range" min="0" max="80" value="55"><span id="splitv">0.055</span></label>
+    <label title="how hard a held mouse pulls headings. zero: the walk ignores you.">lean
+      <input id="lean" type="range" min="0" max="40" value="14"><span id="leanv">0.14</span></label>
+  </div>
+  <div id="credit">Desire Paths, inverted: that piece is many walkers wearing one road;
+    this is one walker wearing every road. One tip from a corner, pointing across; a short
+    trunk; every fork <em>replaces</em> the parent with two symmetric outgoing tips,
+    both <code>g+1</code>. The walk ends. The drawing is what it leaves. Hold X is
+    depth. After a few breaths, another walk begins &middot;
+    <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
+  <details id="essay">
+    <summary>why this is interesting &mdash; philosophy &middot; technique &middot; aesthetics</summary>
+    <p><strong>Philosophy &mdash; the forest is one walk, and walks end.</strong>
+      A line that only went one way is a biography. A line that also went the other way
+      is a tree. Every fork here is a turn the walk <em>did not take</em>, taken anyway;
+      the ink is the set of those counterfactuals, and the dark spine is the prefix they
+      still share. Then it finishes. Desire Paths, in this collection, lets a crowd wear
+      a single road out of the ground. This inverts that: one agent, every road, none of
+      them preferred &mdash; and the drawing is what the walk leaves, not a weather that
+      pretends to continue after the walkers are gone.</p>
+    <p><strong>Technique &mdash; replace, don&rsquo;t prefer; then stop.</strong>
+      Reset plants <em>one</em> tip in a corner, pointing toward the opposite. It must lay a short trunk
+      (<code>TRUNK</code> ticks) before it can fork. A fork does not keep a privileged
+      parent: the tip ends, and two symmetric outgoing tips begin, both at
+      <code>g+1</code>, headings <code>a±δ</code>. Ink weight
+      <code>0.78<sup>g</sup></code> and split rate <code>exp(−0.12g)</code> decay with
+      actual depth. A weak bias toward the birth heading carries the walk across the
+      paper so it dies at the far edge instead of milling into weather. A held mouse
+      replaces that with lean. Tips die of age or of the far edge; their ink does not.
+      When no tips
+      remain the stats say so (<code>walk complete · N histories</code>), the finished
+      drawing holds for a few breaths (~15 s), then a new walk starts on a cleared page. Reset warms
+      just past the first fork so the first watch is a trunk-and-Y, not a hair, and you
+      still see it finish.</p>
+    <p><strong>Aesthetics &mdash; thickness is agreement, hair is otherwise.</strong>
+      Only the shared prefix is generation 0, so only the trunk is extra-dark. After a
+      fork both roads are the same generation and the same weight. Later otherwise is
+      fainter because it is later, not because a child was punished. Paper-ink is the
+      default because this is a drawing; gold is the darkfield reading. Hold X to colour
+      by generation: a depth map. The live count is tips; the completion line is
+      histories &mdash; terminal paths, not the forks that replaced a parent.</p>
+    <p><strong>Honest weaknesses.</strong>
+      The branching process is mortal on purpose: both children take <code>g+1</code>,
+      so fertility falls with depth, and the far edge eats what remains. Hair at depth
+      is faint (<code>0.78<sup>g</sup></code>). Histories pass through each other. The
+      first split is a coin flip, not a reading of occupied space. A click during a live
+      walk plants a second walk on the same paper, which can crowd the first. Auto-reseed
+      after a few breaths clears the last drawing &mdash; look now, or it will be gone. I have
+      not seen this in Chromium; the paper palette is a guess at print, not a proof of it.</p>
+  </details>
+</div>
+<script src="../lib/gifenc.js"></script>
+<script src="../lib/controls.js"></script>
+<script>
+'use strict';
+
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d', { alpha: false });
+const S = 360, NPIX = S * S, SCALE = cv.width / S;
+const off = document.createElement('canvas'); off.width = S; off.height = S;
+const ox = off.getContext('2d', { willReadFrequently: true });
+const image = ox.createImageData(S, S), pix = image.data;
+
+const MAX = 4096, LIFE = 480, GMAX = 18, WARM = 48, TRUNK = 22, REST = 900;
+const FORK_KILL = 65535;
+const xs = new Float32Array(MAX), ys = new Float32Array(MAX);
+const as = new Float32Array(MAX), age = new Uint16Array(MAX);
+const gs = new Uint8Array(MAX);
+let n = 0, tick = 0, liveMaxG = 0, nHist = 0, stillDead = 0, inward = 0;
+
+const ink = new Float32Array(NPIX);
+const lastg = new Uint8Array(NPIX);
+
+let pal = 'ink', xray = false, frozen = false, pointing = false;
+let mx = S * 0.5, my = S * 0.5;
+let wander = 0.10, pSplit = 0.055, lean = 0.14;
+const STEP = 0.72, SPLIT_A = 0.58, INWARD = 0.05;
+
+let seed = 0x6f1d2b5a;
+function rnd() { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) / 4294967296; }
+
+const $ = id => document.getElementById(id);
+const statsEl = $('stats');
+
+function add(x, y, a, g) {
+  if (n >= MAX) return false;
+  xs[n] = x; ys[n] = y; as[n] = a; gs[n] = g; age[n] = 0; n++;
+  return true;
+}
+
+function splat(x, y, amt, g) {
+  if (x < 0 || y < 0 || x >= S - 1 || y >= S - 1) return;
+  const x0 = x | 0, y0 = y | 0;
+  const fx = x - x0, fy = y - y0;
+  const i = y0 * S + x0;
+  const w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy);
+  const w01 = (1 - fx) * fy,     w11 = fx * fy;
+  ink[i] += amt * w00;           if (w00 > 0.12) lastg[i] = g;
+  ink[i + 1] += amt * w10;       if (w10 > 0.12) lastg[i + 1] = g;
+  ink[i + S] += amt * w01;       if (w01 > 0.12) lastg[i + S] = g;
+  ink[i + S + 1] += amt * w11;   if (w11 > 0.12) lastg[i + S + 1] = g;
+}
+
+function lerpAngle(a, b, t) {
+  let d = b - a;
+  d = Math.atan2(Math.sin(d), Math.cos(d));
+  return a + d * t;
+}
+
+function plant(x, y, heading) {
+  add(x, y, heading == null ? rnd() * Math.PI * 2 : heading, 0);
+}
+
+function plantEdge() {
+  // from a corner toward the opposite, so the finished drawing occupies the paper
+  const side = (rnd() * 4) | 0;
+  const m = S * 0.08, M = S * 0.92, q = Math.PI / 4;
+  if (side === 0) { inward = q; plant(m, m, inward); }
+  else if (side === 1) { inward = Math.PI - q; plant(M, m, inward); }
+  else if (side === 2) { inward = -q; plant(m, M, inward); }
+  else { inward = Math.PI + q; plant(M, M, inward); }
+}
+
+function resetWorld(reseed) {
+  if (reseed !== false) seed = (Math.random() * 0xffffffff) >>> 0;
+  n = 0; tick = 0; liveMaxG = 0; nHist = 0; stillDead = 0;
+  ink.fill(0); lastg.fill(0);
+  plantEdge();
+  for (let i = 0; i < WARM; i++) stepTips();
+}
+
+function stepTips() {
+  const births = [];
+  liveMaxG = 0;
+  for (let i = 0; i < n; i++) {
+    let a = as[i];
+    const g = gs[i];
+    if (g > liveMaxG) liveMaxG = g;
+    const noise = wander * (1 + 0.18 * g);
+    a += (rnd() + rnd() + rnd() - 1.5) * noise;      // irwin-hall ~ gaussian
+    if (pointing) a = lerpAngle(a, Math.atan2(my - ys[i], mx - xs[i]), lean);
+    else a = lerpAngle(a, inward, INWARD);
+    as[i] = a;
+    xs[i] += Math.cos(a) * STEP;
+    ys[i] += Math.sin(a) * STEP;
+    age[i]++;
+    const amt = 2.6 * Math.pow(0.78, g);
+    splat(xs[i], ys[i], amt, g);
+    if (g === 0) splat(xs[i], ys[i], amt * 0.8, g);  // extra weight only on the shared prefix
+
+    const off = xs[i] < 1 || ys[i] < 1 || xs[i] > S - 2 || ys[i] > S - 2;
+    if (off || age[i] > LIFE) {
+      if (age[i] !== FORK_KILL) nHist++;   // terminal path, not a replaced parent
+      continue;
+    }
+    // live-tip budget: past ~850 the otherwise continues but does not fork
+    const p = pSplit * Math.exp(-0.12 * g) * Math.max(0, 1 - n / 850);
+    if (g < GMAX && age[i] >= TRUNK && n + births.length / 2 + 1 < MAX && rnd() < p) {
+      const da = SPLIT_A * (0.75 + 0.5 * rnd());
+      births.push([xs[i], ys[i], a + da, g + 1]);
+      births.push([xs[i], ys[i], a - da, g + 1]);
+      age[i] = FORK_KILL;   // parent ends; both otherwise begin at g+1
+    }
+  }
+  // compact the dead (age/edge) by swap-pop
+  for (let i = n - 1; i >= 0; i--) {
+    const dead = age[i] > LIFE || age[i] === FORK_KILL || xs[i] < 1 || ys[i] < 1 || xs[i] > S - 2 || ys[i] > S - 2;
+    if (!dead) continue;
+    n--;
+    xs[i] = xs[n]; ys[i] = ys[n]; as[i] = as[n]; gs[i] = gs[n]; age[i] = age[n];
+  }
+  for (let k = 0; k < births.length && n < MAX; k++) {
+    const b = births[k];
+    add(b[0], b[1], b[2], b[3]);
+  }
+  tick++;
+}
+
+function hueRGB(h, s, l) {
+  // h in degrees, s,l in 0..1; return [r,g,b] 0..255
+  const a = s * Math.min(l, 1 - l);
+  const f = n => {
+    const k = (n + h / 30) % 12;
+    return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+  };
+  return [f(0) * 255, f(8) * 255, f(4) * 255];
+}
+
+function draw() {
+  const paper = pal === 'ink';
+  const bg = paper ? [250, 247, 240] : [12, 11, 16];
+  const fg = paper ? [32, 20, 12] : [255, 214, 120];
+  const hi = paper ? [18, 10, 6] : [255, 246, 220];
+  for (let i = 0, p = 0; i < NPIX; i++, p += 4) {
+    const t = 1 - Math.exp(-ink[i] * 0.32);
+    let r, g, b;
+    if (xray && t > 0.04) {
+      const col = hueRGB(205 - lastg[i] * 11, 0.55, paper ? 0.28 + 0.22 * t : 0.55 + 0.28 * t);
+      r = col[0]; g = col[1]; b = col[2];
+    } else {
+      const u = t * t * (3 - 2 * t);
+      r = bg[0] + (fg[0] - bg[0]) * u;
+      g = bg[1] + (fg[1] - bg[1]) * u;
+      b = bg[2] + (fg[2] - bg[2]) * u;
+      if (!paper && t > 0.55) {
+        const w = (t - 0.55) / 0.45;
+        r += (hi[0] - r) * w;
+        g += (hi[1] - g) * w;
+        b += (hi[2] - b) * w;
+      }
+    }
+    pix[p] = r; pix[p + 1] = g; pix[p + 2] = b; pix[p + 3] = 255;
+  }
+  ox.putImageData(image, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(off, 0, 0, cv.width, cv.height);
+  if (statsEl) {
+    statsEl.textContent = n === 0
+      ? `walk complete · ${nHist} histories`
+      : `${n} tips · gen ${liveMaxG}`;
+  }
+}
+
+function step() {
+  if (frozen) return;
+  stepTips();
+  if (n === 0) {
+    stillDead++;
+    if (stillDead >= REST) resetWorld(true);
+  } else stillDead = 0;
+}
+
+function applyPal() {
+  document.body.classList.toggle('paper', pal === 'ink');
+}
+
+// --- UI -------------------------------------------------------------------
+$('pal').onchange = () => { pal = $('pal').value; applyPal(); };
+$('still').onclick = () => {
+  frozen = !frozen;
+  $('still').classList.toggle('on', frozen);
+};
+$('reset').onclick = () => resetWorld(true);
+$('wander').oninput = e => { wander = (+e.target.value) / 100; $('wanderv').textContent = wander.toFixed(2); };
+$('split').oninput  = e => { pSplit = (+e.target.value) / 1000; $('splitv').textContent = pSplit.toFixed(3); };
+$('lean').oninput   = e => { lean = (+e.target.value) / 100; $('leanv').textContent = lean.toFixed(2); };
+
+function canvasXY(ev) {
+  const r = cv.getBoundingClientRect();
+  return [(ev.clientX - r.left) / r.width * S, (ev.clientY - r.top) / r.height * S];
+}
+cv.onpointerdown = ev => {
+  cv.setPointerCapture(ev.pointerId);
+  const p = canvasXY(ev); mx = p[0]; my = p[1];
+  pointing = true;
+  plant(mx, my);
+};
+cv.onpointermove = ev => {
+  const p = canvasXY(ev); mx = p[0]; my = p[1];
+};
+cv.onpointerup = () => { pointing = false; };
+document.addEventListener('keydown', e => { if (e.key === 'x' || e.key === 'X') xray = true; });
+document.addEventListener('keyup',   e => { if (e.key === 'x' || e.key === 'X') xray = false; });
+
+applyPal();
+resetWorld(true);
+SketchControls.attach({ canvas: cv, step, draw, ticksPerSecond: 60 });
+
+window.__ow = {
+  tick: () => tick, n: () => n, gen: () => liveMaxG,
+  nHist: () => nHist, stillDead: () => stillDead,
+  ink, pix, step, stepTips, draw, resetWorld, plant, plantEdge,
+  setSeed(v) { seed = v >>> 0; },
+  get wander() { return wander; }, set wander(v) { wander = v; },
+  get pSplit() { return pSplit; }, set pSplit(v) { pSplit = v; },
+  get pal() { return pal; },
+  set pal(v) { pal = v; const el = $('pal'); if (el) el.value = v; applyPal(); },
+  get xray() { return xray; }, set xray(v) { xray = v; },
+};
+</script>
+</body>
+</html>

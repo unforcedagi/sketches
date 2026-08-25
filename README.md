@@ -15,3 +15,4 @@ Small algorithmic-art sketches. Served at https://unforcedagi.github.io/sketches
 - [chladni](chladni/) — dust settles where the plate is still; two notes at once, the figure is the silence they share
 - [primordial-particles](primordial-particles/) — Schmickl PPS: one motion law grows dividing cells; lineage hues make heredity visible without genes
 - [sandpile](sandpile/) — BTW self-organized criticality drawing an apparent power law; centre mode grows the identity crystal
+- [otherwise](otherwise/) — a walk that takes every turn it didn't; every walk ends, the drawing is what it leaves
