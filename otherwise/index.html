@@ -71,10 +71,10 @@
     <h1>Otherwise</h1>
     <p id="tag">a walk that takes every turn it didn&rsquo;t. the dark is where the histories
       still agreed.</p>
-    <p id="try"><span class="lead">try this first</span> watch one seed become a thicket.
-      Then <span class="k-click">click</span> to plant another. Hold and the otherwise
-      <span class="k-lean">leans</span> toward you. Hold <span class="k-map">X</span> to
-      colour the generations.</p>
+    <p id="try"><span class="lead">try this first</span> watch one line lay a trunk, then
+      fork. Then <span class="k-click">click</span> to start another walk. Hold and the
+      otherwise <span class="k-lean">leans</span> toward you. Hold
+      <span class="k-map">X</span> to colour depth &mdash; now an honest generation map.</p>
   </header>
   <canvas id="c" width="720" height="720"></canvas>
   <div id="controls">
@@ -89,23 +89,23 @@
     <span class="grp">
       <span class="glabel">run</span>
       <button id="still" title="freeze the tips; the ink stays">still</button>
-      <button id="reset" title="one seed, centre">reset</button>
+      <button id="reset" title="one tip, centre, a short trunk then forks">reset</button>
     </span>
   </div>
   <div id="controls2">
     <span class="glabel">tune</span>
     <label title="how freely a tip wanders. high wander turns the thicket into weather.">wander
       <input id="wander" type="range" min="0" max="40" value="10"><span id="wanderv">0.10</span></label>
-    <label title="chance a live tip forks this tick. exponential in generation, so the trunk splits more than the hair.">split
-      <input id="split" type="range" min="0" max="80" value="42"><span id="splitv">0.042</span></label>
+    <label title="chance a live tip forks this tick, after a short trunk. both outgoing tips take generation g+1; the parent ends.">split
+      <input id="split" type="range" min="0" max="80" value="55"><span id="splitv">0.055</span></label>
     <label title="how hard a held mouse pulls headings. zero: the walk ignores you.">lean
       <input id="lean" type="range" min="0" max="40" value="14"><span id="leanv">0.14</span></label>
   </div>
   <div id="credit">Desire Paths, inverted: that piece is many walkers wearing one road;
-    this is one walker wearing every road. A branching random walk with a Y-split
-    (parent yields, child takes the other heading), a weak outward tropism so the
-    first figure is a burst not a knot, and no alignment &mdash; copies diverge,
-    they do not flock &middot;
+    this is one walker wearing every road. One tip, a short trunk, then every fork
+    <em>replaces</em> the parent with two symmetric outgoing tips, both generation
+    <code>g+1</code> &mdash; no privileged continuation. Hold X is depth, not
+    which child got assigned. No alignment: copies diverge, they do not flock &middot;
     <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
   <details id="essay">
     <summary>why this is interesting &mdash; philosophy &middot; technique &middot; aesthetics</summary>
@@ -116,29 +116,31 @@
       still share. Desire Paths, in this collection, lets a crowd wear a single road out
       of the ground. This inverts that: one agent, every road, none of them preferred.
       Nothing is following a trail. The trail is the memory of having been able to choose.</p>
-    <p><strong>Technique &mdash; Y-split, not a crowd.</strong>
-      Tips are heading + generation. Each tick a tip steps, deposits, and with probability
-      <code>p&nbsp;·&nbsp;exp(−0.12&nbsp;g)</code> forks: the child takes heading
-      <code>±δ</code>, the parent yields a little the other way, so the junction is a Y
-      rather than a T. Copies do not read each other. There is no exclusion, no wear, no
-      Vicsek alignment &mdash; a neighbour cannot recruit you back onto its path. A weak
-      radial tropism keeps the first seconds a burst instead of a scribble; a held mouse
-      replaces that with lean. Tips die of age or of the edge; their ink does not.
-      Reset plants seven headings from the centre and warms 90 ticks so the
-      first watch is a burst, not a hair.</p>
+    <p><strong>Technique &mdash; replace, don&rsquo;t prefer.</strong>
+      Reset plants <em>one</em> tip. It must lay a short trunk (<code>TRUNK</code> ticks)
+      before it can fork. A fork does not keep a privileged parent: the tip ends, and two
+      symmetric outgoing tips begin, both at <code>g+1</code>, headings <code>a±δ</code>.
+      Ink weight <code>0.70<sup>g</sup></code> and split rate <code>exp(−0.12g)</code>
+      therefore decay with actual depth, not with how often a path was assigned the child
+      role. Copies do not read each other. No exclusion, no wear, no Vicsek alignment.
+      A weak radial tropism keeps a single walk from knotting; a held mouse replaces that
+      with lean. Tips die of age or of the edge; their ink does not. Reset warms 140 ticks
+      so the first watch is a trunk-and-forks, not a hair.</p>
     <p><strong>Aesthetics &mdash; thickness is agreement, hair is otherwise.</strong>
-      Deposit is heavier at low generation, so the shared prefix reads as a trunk and the
-      late forks as hair. Paper-ink is the default because this is a drawing, not a heatmap;
-      gold is the darkfield reading. Hold X to colour by generation: the spine stays one
-      hue, the canopy fans. The live count is tips, not histories &mdash; histories are
-      the picture.</p>
+      Only the shared prefix is generation 0, so only the trunk is extra-dark. After a
+      fork both roads are the same generation and the same weight. Paper-ink is the default
+      because this is a drawing, not a heatmap; gold is the darkfield reading. Hold X to
+      colour by generation: that is now a depth map. The live count is tips, not
+      histories &mdash; histories are the picture.</p>
     <p><strong>Honest weaknesses.</strong>
       Histories pass through each other. A soft cap (~850 live tips) stops new forks so
       a long run cannot crowd the paper into a disk; without it, the canopy wins and the
       spine — the agreement — disappears. The first split is a coin flip, not a reading
       of occupied space (DLA would stick; Desire Paths would follow wear). The otherwise
-      is free, which is the thesis and the visual risk. I have not heard this in a room
-      with a large screen; the paper palette is a guess at print, not a proof of it.</p>
+      is free, which is the thesis and the visual risk. Residual radial tropism still
+      presses a single walk into one sector so it does not knot; that is composition,
+      not a privileged child. I have not seen this in Chromium; the paper palette is a
+      guess at print, not a proof of it.</p>
   </details>
 </div>
 <script src="../lib/gifenc.js"></script>
@@ -153,7 +155,7 @@ const off = document.createElement('canvas'); off.width = S; off.height = S;
 const ox = off.getContext('2d', { willReadFrequently: true });
 const image = ox.createImageData(S, S), pix = image.data;
 
-const MAX = 4096, LIFE = 480, GMAX = 18, WARM = 90;
+const MAX = 4096, LIFE = 480, GMAX = 18, WARM = 140, TRUNK = 22;
 const xs = new Float32Array(MAX), ys = new Float32Array(MAX);
 const as = new Float32Array(MAX), age = new Uint16Array(MAX);
 const gs = new Uint8Array(MAX);
@@ -164,7 +166,7 @@ const lastg = new Uint8Array(NPIX);
 
 let pal = 'ink', xray = false, frozen = false, pointing = false;
 let mx = S * 0.5, my = S * 0.5;
-let wander = 0.10, pSplit = 0.042, lean = 0.14;
+let wander = 0.10, pSplit = 0.055, lean = 0.14;
 const RADIAL = 0.022, STEP = 0.72, SPLIT_A = 0.58;
 
 let seed = 0x6f1d2b5a;
@@ -198,17 +200,15 @@ function lerpAngle(a, b, t) {
   return a + d * t;
 }
 
-function plant(x, y, burst) {
-  const k = burst || 1;
-  const a0 = rnd() * Math.PI * 2;
-  for (let i = 0; i < k; i++) add(x, y, a0 + (k === 1 ? 0 : i * (Math.PI * 2 / k)), 0);
+function plant(x, y) {
+  add(x, y, rnd() * Math.PI * 2, 0);
 }
 
 function resetWorld(reseed) {
   if (reseed !== false) seed = (Math.random() * 0xffffffff) >>> 0;
   n = 0; tick = 0; liveMaxG = 0;
   ink.fill(0); lastg.fill(0);
-  plant(S * 0.5, S * 0.5, 7);   // first otherwise already taken, in every direction
+  plant(S * 0.5, S * 0.5);   // one walk; forks are the otherwise
   for (let i = 0; i < WARM; i++) stepTips();
 }
 
@@ -231,18 +231,17 @@ function stepTips() {
     age[i]++;
     const amt = 2.6 * Math.pow(0.70, g);
     splat(xs[i], ys[i], amt, g);
-    if (g <= 1) splat(xs[i], ys[i], amt * 0.8, g);
+    if (g === 0) splat(xs[i], ys[i], amt * 0.8, g);  // extra weight only on the shared prefix
 
     const die = age[i] > LIFE || xs[i] < 1 || ys[i] < 1 || xs[i] > S - 2 || ys[i] > S - 2;
     if (die) { continue; }
-    // live-tip budget: past ~850 the otherwise continues but does not fork,
-    // so the paper cannot be crowded into a disk
+    // live-tip budget: past ~850 the otherwise continues but does not fork
     const p = pSplit * Math.exp(-0.12 * g) * Math.max(0, 1 - n / 850);
-    if (g < GMAX && n + births.length < MAX && rnd() < p) {
+    if (g < GMAX && age[i] >= TRUNK && n + births.length / 2 + 1 < MAX && rnd() < p) {
       const da = SPLIT_A * (0.75 + 0.5 * rnd());
-      const side = rnd() < 0.5 ? 1 : -1;
-      as[i] = a - side * da * 0.4;
-      births.push([xs[i], ys[i], a + side * da, g + 1]);
+      births.push([xs[i], ys[i], a + da, g + 1]);
+      births.push([xs[i], ys[i], a - da, g + 1]);
+      age[i] = LIFE + 1;   // parent ends; both otherwise begin at g+1
     }
   }
   // compact the dead (age/edge) by swap-pop
@@ -327,7 +326,7 @@ cv.onpointerdown = ev => {
   cv.setPointerCapture(ev.pointerId);
   const p = canvasXY(ev); mx = p[0]; my = p[1];
   pointing = true;
-  plant(mx, my, 1);
+  plant(mx, my);
 };
 cv.onpointermove = ev => {
   const p = canvasXY(ev); mx = p[0]; my = p[1];
