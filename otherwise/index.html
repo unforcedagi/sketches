@@ -73,7 +73,7 @@
       is what it leaves.</p>
     <p id="try"><span class="lead">try this first</span> watch one line enter, fork, and
       finish. The stats will say so. Then <span class="k-click">click</span> to start
-      another walk on the same paper, or wait &mdash; after a breath a new walk begins.
+      another walk on the same paper, or wait &mdash; after a few breaths a new walk begins.
       Hold and the otherwise <span class="k-lean">leans</span>. Hold
       <span class="k-map">X</span> to colour depth.</p>
   </header>
@@ -106,7 +106,7 @@
     this is one walker wearing every road. One tip from a corner, pointing across; a short
     trunk; every fork <em>replaces</em> the parent with two symmetric outgoing tips,
     both <code>g+1</code>. The walk ends. The drawing is what it leaves. Hold X is
-    depth. After a stillness, another walk begins &middot;
+    depth. After a few breaths, another walk begins &middot;
     <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
   <details id="essay">
     <summary>why this is interesting &mdash; philosophy &middot; technique &middot; aesthetics</summary>
@@ -129,7 +129,7 @@
       replaces that with lean. Tips die of age or of the far edge; their ink does not.
       When no tips
       remain the stats say so (<code>walk complete · N histories</code>), the finished
-      drawing holds for a breath, then a new walk starts on a cleared page. Reset warms
+      drawing holds for a few breaths (~15 s), then a new walk starts on a cleared page. Reset warms
       just past the first fork so the first watch is a trunk-and-Y, not a hair, and you
       still see it finish.</p>
     <p><strong>Aesthetics &mdash; thickness is agreement, hair is otherwise.</strong>
@@ -145,7 +145,7 @@
       is faint (<code>0.78<sup>g</sup></code>). Histories pass through each other. The
       first split is a coin flip, not a reading of occupied space. A click during a live
       walk plants a second walk on the same paper, which can crowd the first. Auto-reseed
-      after stillness clears the last drawing &mdash; look now, or it will be gone. I have
+      after a few breaths clears the last drawing &mdash; look now, or it will be gone. I have
       not seen this in Chromium; the paper palette is a guess at print, not a proof of it.</p>
   </details>
 </div>
@@ -161,7 +161,7 @@ const off = document.createElement('canvas'); off.width = S; off.height = S;
 const ox = off.getContext('2d', { willReadFrequently: true });
 const image = ox.createImageData(S, S), pix = image.data;
 
-const MAX = 4096, LIFE = 480, GMAX = 18, WARM = 48, TRUNK = 22, REST = 300;
+const MAX = 4096, LIFE = 480, GMAX = 18, WARM = 48, TRUNK = 22, REST = 900;
 const FORK_KILL = 65535;
 const xs = new Float32Array(MAX), ys = new Float32Array(MAX);
 const as = new Float32Array(MAX), age = new Uint16Array(MAX);
