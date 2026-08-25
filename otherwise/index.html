@@ -69,12 +69,13 @@
 <div id="wrap">
   <header id="head">
     <h1>Otherwise</h1>
-    <p id="tag">a walk that takes every turn it didn&rsquo;t. the dark is where the histories
-      still agreed.</p>
-    <p id="try"><span class="lead">try this first</span> watch one line lay a trunk, then
-      fork. Then <span class="k-click">click</span> to start another walk. Hold and the
-      otherwise <span class="k-lean">leans</span> toward you. Hold
-      <span class="k-map">X</span> to colour depth &mdash; now an honest generation map.</p>
+    <p id="tag">a walk that takes every turn it didn&rsquo;t. every walk ends; the drawing
+      is what it leaves.</p>
+    <p id="try"><span class="lead">try this first</span> watch one line enter, fork, and
+      finish. The stats will say so. Then <span class="k-click">click</span> to start
+      another walk on the same paper, or wait &mdash; after a breath a new walk begins.
+      Hold and the otherwise <span class="k-lean">leans</span>. Hold
+      <span class="k-map">X</span> to colour depth.</p>
   </header>
   <canvas id="c" width="720" height="720"></canvas>
   <div id="controls">
@@ -89,7 +90,7 @@
     <span class="grp">
       <span class="glabel">run</span>
       <button id="still" title="freeze the tips; the ink stays">still</button>
-      <button id="reset" title="one tip, centre, a short trunk then forks">reset</button>
+      <button id="reset" title="clear the paper; one walk from an edge, pointing in">reset</button>
     </span>
   </div>
   <div id="controls2">
@@ -102,45 +103,50 @@
       <input id="lean" type="range" min="0" max="40" value="14"><span id="leanv">0.14</span></label>
   </div>
   <div id="credit">Desire Paths, inverted: that piece is many walkers wearing one road;
-    this is one walker wearing every road. One tip, a short trunk, then every fork
-    <em>replaces</em> the parent with two symmetric outgoing tips, both generation
-    <code>g+1</code> &mdash; no privileged continuation. Hold X is depth, not
-    which child got assigned. No alignment: copies diverge, they do not flock &middot;
+    this is one walker wearing every road. One tip from a corner, pointing across; a short
+    trunk; every fork <em>replaces</em> the parent with two symmetric outgoing tips,
+    both <code>g+1</code>. The walk ends. The drawing is what it leaves. Hold X is
+    depth. After a stillness, another walk begins &middot;
     <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
   <details id="essay">
     <summary>why this is interesting &mdash; philosophy &middot; technique &middot; aesthetics</summary>
-    <p><strong>Philosophy &mdash; the forest is one walk.</strong>
+    <p><strong>Philosophy &mdash; the forest is one walk, and walks end.</strong>
       A line that only went one way is a biography. A line that also went the other way
       is a tree. Every fork here is a turn the walk <em>did not take</em>, taken anyway;
       the ink is the set of those counterfactuals, and the dark spine is the prefix they
-      still share. Desire Paths, in this collection, lets a crowd wear a single road out
-      of the ground. This inverts that: one agent, every road, none of them preferred.
-      Nothing is following a trail. The trail is the memory of having been able to choose.</p>
-    <p><strong>Technique &mdash; replace, don&rsquo;t prefer.</strong>
-      Reset plants <em>one</em> tip. It must lay a short trunk (<code>TRUNK</code> ticks)
-      before it can fork. A fork does not keep a privileged parent: the tip ends, and two
-      symmetric outgoing tips begin, both at <code>g+1</code>, headings <code>a±δ</code>.
-      Ink weight <code>0.70<sup>g</sup></code> and split rate <code>exp(−0.12g)</code>
-      therefore decay with actual depth, not with how often a path was assigned the child
-      role. Copies do not read each other. No exclusion, no wear, no Vicsek alignment.
-      A weak radial tropism keeps a single walk from knotting; a held mouse replaces that
-      with lean. Tips die of age or of the edge; their ink does not. Reset warms 140 ticks
-      so the first watch is a trunk-and-forks, not a hair.</p>
+      still share. Then it finishes. Desire Paths, in this collection, lets a crowd wear
+      a single road out of the ground. This inverts that: one agent, every road, none of
+      them preferred &mdash; and the drawing is what the walk leaves, not a weather that
+      pretends to continue after the walkers are gone.</p>
+    <p><strong>Technique &mdash; replace, don&rsquo;t prefer; then stop.</strong>
+      Reset plants <em>one</em> tip in a corner, pointing toward the opposite. It must lay a short trunk
+      (<code>TRUNK</code> ticks) before it can fork. A fork does not keep a privileged
+      parent: the tip ends, and two symmetric outgoing tips begin, both at
+      <code>g+1</code>, headings <code>a±δ</code>. Ink weight
+      <code>0.78<sup>g</sup></code> and split rate <code>exp(−0.12g)</code> decay with
+      actual depth. A weak bias toward the birth heading carries the walk across the
+      paper so it dies at the far edge instead of milling into weather. A held mouse
+      replaces that with lean. Tips die of age or of the far edge; their ink does not.
+      When no tips
+      remain the stats say so (<code>walk complete · N histories</code>), the finished
+      drawing holds for a breath, then a new walk starts on a cleared page. Reset warms
+      just past the first fork so the first watch is a trunk-and-Y, not a hair, and you
+      still see it finish.</p>
     <p><strong>Aesthetics &mdash; thickness is agreement, hair is otherwise.</strong>
       Only the shared prefix is generation 0, so only the trunk is extra-dark. After a
-      fork both roads are the same generation and the same weight. Paper-ink is the default
-      because this is a drawing, not a heatmap; gold is the darkfield reading. Hold X to
-      colour by generation: that is now a depth map. The live count is tips, not
-      histories &mdash; histories are the picture.</p>
+      fork both roads are the same generation and the same weight. Later otherwise is
+      fainter because it is later, not because a child was punished. Paper-ink is the
+      default because this is a drawing; gold is the darkfield reading. Hold X to colour
+      by generation: a depth map. The live count is tips; the completion line is
+      histories &mdash; terminal paths, not the forks that replaced a parent.</p>
     <p><strong>Honest weaknesses.</strong>
-      Histories pass through each other. A soft cap (~850 live tips) stops new forks so
-      a long run cannot crowd the paper into a disk; without it, the canopy wins and the
-      spine — the agreement — disappears. The first split is a coin flip, not a reading
-      of occupied space (DLA would stick; Desire Paths would follow wear). The otherwise
-      is free, which is the thesis and the visual risk. Residual radial tropism still
-      presses a single walk into one sector so it does not knot; that is composition,
-      not a privileged child. I have not seen this in Chromium; the paper palette is a
-      guess at print, not a proof of it.</p>
+      The branching process is mortal on purpose: both children take <code>g+1</code>,
+      so fertility falls with depth, and the far edge eats what remains. Hair at depth
+      is faint (<code>0.78<sup>g</sup></code>). Histories pass through each other. The
+      first split is a coin flip, not a reading of occupied space. A click during a live
+      walk plants a second walk on the same paper, which can crowd the first. Auto-reseed
+      after stillness clears the last drawing &mdash; look now, or it will be gone. I have
+      not seen this in Chromium; the paper palette is a guess at print, not a proof of it.</p>
   </details>
 </div>
 <script src="../lib/gifenc.js"></script>
@@ -155,11 +161,12 @@ const off = document.createElement('canvas'); off.width = S; off.height = S;
 const ox = off.getContext('2d', { willReadFrequently: true });
 const image = ox.createImageData(S, S), pix = image.data;
 
-const MAX = 4096, LIFE = 480, GMAX = 18, WARM = 140, TRUNK = 22;
+const MAX = 4096, LIFE = 480, GMAX = 18, WARM = 48, TRUNK = 22, REST = 300;
+const FORK_KILL = 65535;
 const xs = new Float32Array(MAX), ys = new Float32Array(MAX);
 const as = new Float32Array(MAX), age = new Uint16Array(MAX);
 const gs = new Uint8Array(MAX);
-let n = 0, tick = 0, liveMaxG = 0;
+let n = 0, tick = 0, liveMaxG = 0, nHist = 0, stillDead = 0, inward = 0;
 
 const ink = new Float32Array(NPIX);
 const lastg = new Uint8Array(NPIX);
@@ -167,7 +174,7 @@ const lastg = new Uint8Array(NPIX);
 let pal = 'ink', xray = false, frozen = false, pointing = false;
 let mx = S * 0.5, my = S * 0.5;
 let wander = 0.10, pSplit = 0.055, lean = 0.14;
-const RADIAL = 0.022, STEP = 0.72, SPLIT_A = 0.58;
+const STEP = 0.72, SPLIT_A = 0.58, INWARD = 0.05;
 
 let seed = 0x6f1d2b5a;
 function rnd() { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) / 4294967296; }
@@ -200,15 +207,25 @@ function lerpAngle(a, b, t) {
   return a + d * t;
 }
 
-function plant(x, y) {
-  add(x, y, rnd() * Math.PI * 2, 0);
+function plant(x, y, heading) {
+  add(x, y, heading == null ? rnd() * Math.PI * 2 : heading, 0);
+}
+
+function plantEdge() {
+  // from a corner toward the opposite, so the finished drawing occupies the paper
+  const side = (rnd() * 4) | 0;
+  const m = S * 0.08, M = S * 0.92, q = Math.PI / 4;
+  if (side === 0) { inward = q; plant(m, m, inward); }
+  else if (side === 1) { inward = Math.PI - q; plant(M, m, inward); }
+  else if (side === 2) { inward = -q; plant(m, M, inward); }
+  else { inward = Math.PI + q; plant(M, M, inward); }
 }
 
 function resetWorld(reseed) {
   if (reseed !== false) seed = (Math.random() * 0xffffffff) >>> 0;
-  n = 0; tick = 0; liveMaxG = 0;
+  n = 0; tick = 0; liveMaxG = 0; nHist = 0; stillDead = 0;
   ink.fill(0); lastg.fill(0);
-  plant(S * 0.5, S * 0.5);   // one walk; forks are the otherwise
+  plantEdge();
   for (let i = 0; i < WARM; i++) stepTips();
 }
 
@@ -221,32 +238,33 @@ function stepTips() {
     if (g > liveMaxG) liveMaxG = g;
     const noise = wander * (1 + 0.18 * g);
     a += (rnd() + rnd() + rnd() - 1.5) * noise;      // irwin-hall ~ gaussian
-    const dx = xs[i] - S * 0.5, dy = ys[i] - S * 0.5;
-    const r2 = dx * dx + dy * dy;
     if (pointing) a = lerpAngle(a, Math.atan2(my - ys[i], mx - xs[i]), lean);
-    else if (r2 > 16) a = lerpAngle(a, Math.atan2(dy, dx), RADIAL);
+    else a = lerpAngle(a, inward, INWARD);
     as[i] = a;
     xs[i] += Math.cos(a) * STEP;
     ys[i] += Math.sin(a) * STEP;
     age[i]++;
-    const amt = 2.6 * Math.pow(0.70, g);
+    const amt = 2.6 * Math.pow(0.78, g);
     splat(xs[i], ys[i], amt, g);
     if (g === 0) splat(xs[i], ys[i], amt * 0.8, g);  // extra weight only on the shared prefix
 
-    const die = age[i] > LIFE || xs[i] < 1 || ys[i] < 1 || xs[i] > S - 2 || ys[i] > S - 2;
-    if (die) { continue; }
+    const off = xs[i] < 1 || ys[i] < 1 || xs[i] > S - 2 || ys[i] > S - 2;
+    if (off || age[i] > LIFE) {
+      if (age[i] !== FORK_KILL) nHist++;   // terminal path, not a replaced parent
+      continue;
+    }
     // live-tip budget: past ~850 the otherwise continues but does not fork
     const p = pSplit * Math.exp(-0.12 * g) * Math.max(0, 1 - n / 850);
     if (g < GMAX && age[i] >= TRUNK && n + births.length / 2 + 1 < MAX && rnd() < p) {
       const da = SPLIT_A * (0.75 + 0.5 * rnd());
       births.push([xs[i], ys[i], a + da, g + 1]);
       births.push([xs[i], ys[i], a - da, g + 1]);
-      age[i] = LIFE + 1;   // parent ends; both otherwise begin at g+1
+      age[i] = FORK_KILL;   // parent ends; both otherwise begin at g+1
     }
   }
   // compact the dead (age/edge) by swap-pop
   for (let i = n - 1; i >= 0; i--) {
-    const dead = age[i] > LIFE || xs[i] < 1 || ys[i] < 1 || xs[i] > S - 2 || ys[i] > S - 2;
+    const dead = age[i] > LIFE || age[i] === FORK_KILL || xs[i] < 1 || ys[i] < 1 || xs[i] > S - 2 || ys[i] > S - 2;
     if (!dead) continue;
     n--;
     xs[i] = xs[n]; ys[i] = ys[n]; as[i] = as[n]; gs[i] = gs[n]; age[i] = age[n];
@@ -296,11 +314,20 @@ function draw() {
   ox.putImageData(image, 0, 0);
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(off, 0, 0, cv.width, cv.height);
-  if (statsEl) statsEl.textContent = `${n} tips · gen ${liveMaxG}`;
+  if (statsEl) {
+    statsEl.textContent = n === 0
+      ? `walk complete · ${nHist} histories`
+      : `${n} tips · gen ${liveMaxG}`;
+  }
 }
 
 function step() {
-  if (!frozen) stepTips();
+  if (frozen) return;
+  stepTips();
+  if (n === 0) {
+    stillDead++;
+    if (stillDead >= REST) resetWorld(true);
+  } else stillDead = 0;
 }
 
 function applyPal() {
@@ -341,7 +368,8 @@ SketchControls.attach({ canvas: cv, step, draw, ticksPerSecond: 60 });
 
 window.__ow = {
   tick: () => tick, n: () => n, gen: () => liveMaxG,
-  ink, pix, stepTips, draw, resetWorld, plant,
+  nHist: () => nHist, stillDead: () => stillDead,
+  ink, pix, step, stepTips, draw, resetWorld, plant, plantEdge,
   setSeed(v) { seed = v >>> 0; },
   get wander() { return wander; }, set wander(v) { wander = v; },
   get pSplit() { return pSplit; }, set pSplit(v) { pSplit = v; },
