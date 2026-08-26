@@ -16,3 +16,4 @@ Small algorithmic-art sketches. Served at https://unforcedagi.github.io/sketches
 - [primordial-particles](primordial-particles/) — Schmickl PPS: one motion law grows dividing cells; lineage hues make heredity visible without genes
 - [sandpile](sandpile/) — BTW self-organized criticality drawing an apparent power law; centre mode grows the identity crystal
 - [otherwise](otherwise/) — a walk that takes every turn it didn't; every walk ends, the drawing is what it leaves
+- [vicsek](vicsek/) — self-propelled particles align with their neighbours through noise; the flock measures its own order parameter against η while the transition happens

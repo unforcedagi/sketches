@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vicsek</title>
+<style>
+  html, body { margin: 0; min-height: 100%; background: #06070e; color: #c2cbd8;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  #wrap { display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 16px; box-sizing: border-box; }
+  canvas { background: #06070e; border-radius: 10px; max-width: 100%;
+    cursor: crosshair; touch-action: none; }
+  #controls, #controls2 { display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+    justify-content: center; font-size: 12.5px; max-width: 800px; }
+  #controls2 { font-size: 11.5px; color: #7f8a9b; }
+  label { display: flex; gap: 6px; align-items: center; }
+  /* header: what this is, in one breath */
+  #head { width: 800px; max-width: 100%; margin: 2px 0 2px; }
+  #head h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.02em;
+    margin: 0; color: #dee7f2; }
+  #tag { font-size: 12px; color: #7f8a9b; margin: 3px 0 0; line-height: 1.55; }
+  #try { font-size: 11.5px; color: #aab5c4; margin: 9px 0 0; line-height: 1.6;
+    border-left: 2px solid #2a4a63; background: rgba(90, 190, 230, 0.055);
+    padding: 5px 10px; border-radius: 0 5px 5px 0; }
+  #try .lead { color: #5d7488; text-transform: uppercase; letter-spacing: 0.09em;
+    font-size: 10px; margin-right: 4px; }
+  #try .k-eta { color: #6fd8f0; font-weight: 600; }
+  #try .k-plot { color: #f0b878; font-weight: 600; }
+  /* faint group labels so the control strip reads in chunks */
+  .glabel { font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase;
+    color: #616b7a; }
+  .grp { display: inline-flex; gap: 8px; align-items: center; }
+  input[type=range] { width: 96px; accent-color: #46a6c4; }
+  #controls input[type=range] { width: 78px; }
+  #s-eta { width: 150px !important; }
+  button { background: #111721; color: #c2cbd8; border: 1px solid #27313f;
+    border-radius: 6px; padding: 4px 12px; font: inherit; cursor: pointer; }
+  button:hover { background: #1a2230; }
+  #credit { font-size: 11px; color: #767f8d; max-width: 720px; text-align: center;
+    line-height: 1.65; }
+  a { color: #5fb2d4; }
+  #essay { max-width: 660px; font-size: 12.5px; line-height: 1.7; color: #8f98a6;
+    margin-bottom: 26px; }
+  #essay summary { cursor: pointer; color: #767f8d; font-size: 11px; text-align: center; }
+  #essay p { margin: 12px 0; }
+  #essay strong { color: #ccd6e2; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header id="head">
+    <h1>Vicsek</h1>
+    <p id="tag">every particle turns to the average heading of whoever is within one radius of it, then
+      steps forward at fixed speed. The only other ingredient is noise: each turn is spoiled by a random
+      angle of width <span style="color:#6fd8f0">&eta;</span>. Below a critical &eta; the whole flock
+      spontaneously picks one direction out of nowhere &mdash; and the corner panel plots the flock's own
+      order parameter against &eta; while it happens.</p>
+    <p id="try"><span class="lead">try this first</span> just watch. The field arrives as grey static:
+      thousands of particles, no agreed direction, colour drained because nothing agrees with its neighbours.
+      <strong>&eta; is falling on its own</strong> &mdash; and somewhere around 2.9 the grey breaks and the
+      screen floods with one colour, because colour <em>is</em> heading here. Nothing chose which colour.
+      Every dot in the corner is a real measurement the run made on its way past; the cloud
+      scatters hardest exactly where the transition is. Then drag <span class="k-eta">&eta;</span>
+      yourself, or <span class="k-plot">click the plot</span> to jump straight to a value and hold there.</p>
+  </header>
+  <canvas id="c" width="800" height="600"></canvas>
+  <div id="controls">
+    <span class="grp">
+      <span class="glabel">noise</span>
+      <label>&eta; <input id="s-eta" type="range" min="0" max="5" step="0.005" value="3.9"><span id="v-eta">3.90</span></label>
+      <button id="sweep">sweep &middot; on</button>
+    </span>
+    <span class="grp">
+      <span class="glabel">run</span>
+      <button id="reseed">reseed</button>
+    </span>
+  </div>
+  <div id="controls2">
+    <span class="grp">
+      <span class="glabel">flock</span>
+      <label>particles <input id="s-n" type="range" min="800" max="7000" step="100" value="4200"><span id="v-n">4200</span></label>
+      <label>radius <input id="s-r" type="range" min="12" max="34" step="1" value="22"><span id="v-r">22</span></label>
+      <label>speed <input id="s-v" type="range" min="4" max="34" step="1" value="16"><span id="v-v">1.6</span></label>
+    </span>
+    <span class="grp">
+      <span class="glabel">image</span>
+      <label>trail <input id="s-trail" type="range" min="30" max="97" step="1" value="90"><span id="v-trail">90</span></label>
+      <button id="clear">clear plot</button>
+    </span>
+  </div>
+  <div id="credit">the self-propelled particle model of Vicsek, Czir&oacute;k, Ben-Jacob, Cohen &amp; Shochet
+    (<em>Novel type of phase transition in a system of self-driven particles</em>,
+    <a href="https://doi.org/10.1103/PhysRevLett.75.1226">Phys. Rev. Lett. 75, 1226, 1995</a>): on a periodic
+    box, set each particle's heading to the average heading inside radius&nbsp;<code>r</code> plus a uniform
+    random angle in <code>[&minus;&eta;/2,&nbsp;+&eta;/2]</code>, then advance every particle by
+    <code>v</code> &middot; the panel plots &phi;&nbsp;=&nbsp;|&Sigma;v<sub>i</sub>|/Nv, one dot per 12
+    steps, measured only &middot;
+    <a href="https://unforcedagi.github.io/sketches/">&larr; more sketches</a></div>
+  <details id="essay">
+    <summary>why this is interesting &mdash; philosophy &middot; technique &middot; aesthetics</summary>
+    <p><strong>Philosophy &mdash; the direction nobody picked.</strong> There is nothing in this rule that
+      prefers north. Rotate the entire model and it is the same model; the equations do not know left from
+      right. And yet, with the noise turned low enough, four thousand particles end up going one way, and
+      you can point at the screen and name the direction. That is <strong>spontaneous symmetry
+      breaking</strong>: the law keeps a symmetry that its outcome does not. The direction is not caused by
+      anything you could have found by inspecting the rule, or any particle, or the initial conditions in
+      any usable way &mdash; it is a fluctuation that happened to win, amplified by a system that rewards
+      agreement. Run it again and you get another direction, chosen just as thoroughly and for just as
+      little reason. What makes the 1995 result its own paper rather than a footnote to magnetism is where
+      it happens: the Mermin&ndash;Wagner theorem says a two-dimensional system with a continuous symmetry
+      and short-range interactions cannot order at any finite temperature, and a flock is exactly that
+      &mdash; two dimensions, a continuous choice of heading, only local coupling. The loophole is that the
+      particles <em>move</em>. Motion carries alignment across the box faster than diffusion could, and the
+      system orders where an equilibrium magnet is forbidden to. This is a genuinely non-equilibrium
+      ordering: it needs the driving to exist. Whether the transition is continuous or abrupt turned out to
+      be a fifteen-year argument &mdash; the original paper read it as continuous, Gr&eacute;goire and
+      Chat&eacute; (2004) argued that at large enough systems it is discontinuous with the sharpness only
+      appearing at sizes far past anything on this canvas. This piece does not settle that, and does not
+      pretend to. It plots what it measured.</p>
+    <p><strong>Technique &mdash; the instrument, and why it slows down.</strong> Two disciplines matter.
+      First, the neighbourhood: the rule is a range query over every particle every step, which is
+      quadratic if you do it naively. The particles are counting-sorted into a uniform grid of cells exactly
+      <code>r</code> across, with positions copied into cell order so the inner loop walks memory
+      forwards, and each pair is tested <em>once</em> and credited to both ends &mdash; "j is within r of i"
+      and "i is within r of j" are the same fact, so the half-stencil (self cell, plus four of the eight
+      neighbours) does all the work at half the distance checks. Second, the measurement. The panel is a
+      scatter plot and nothing else. There is no fitted curve, no spline through the dots, no smoothing that
+      would turn scatter into a line, and no marked &eta;<sub>c</sub>: every dot is the mean of &phi; over 12
+      consecutive steps of the run you are watching, dropped at the mean &eta; of those same steps, and left
+      there. What the plot then shows for free is the thing a fitted curve would have destroyed &mdash; the
+      dots are <em>tight</em> at both ends and <em>sprayed</em> through the middle, because near a critical
+      point the fluctuations are the physics, not the error bars. The sweep is deliberately slowest there:
+      the rate is scaled by how close &phi; currently is to the middle of its range, so the run spends its
+      time where the measurement is changing. Two honest caveats live in that design. The dots are coloured
+      by sweep direction, cyan going down and amber coming back up, so any gap between the branches is
+      visible &mdash; but a sweep at finite rate always lags, so a gap here is an <em>upper bound</em> on
+      hysteresis and not evidence of it. And this box holds a few thousand particles, which is small; the
+      literature's sharpest claims are about systems orders of magnitude larger, so no exponent is printed
+      and none is implied.</p>
+    <p><strong>Aesthetics &mdash; colour is heading, chroma is agreement.</strong> The obvious way to draw
+      a flock is arrows, and arrows are unreadable at four thousand. So each particle is a short stroke
+      along its own heading, and its hue <em>is</em> that heading, mapped around a full cycle &mdash;
+      heading is an angle, so the colour map has to close, or the piece would invent a seam where the
+      physics has none. The map is built in OKLCh at fixed lightness with the chroma gamut-clipped per hue,
+      so no direction is louder than any other; a rainbow is exactly wrong here, because a rainbow makes
+      yellow shout and blue mumble and you would read that as structure. The second channel is the one that
+      does the real work: a particle's chroma and brightness are set by <em>local</em> alignment, the same
+      quantity the rule already computed to steer it. But local alignment is never zero &mdash; a dozen
+      random headings still add up to something &mdash; so each particle is scored against the chance level
+      for <em>its own</em> neighbour count, and against the best a patch in perfect consensus could still
+      measure at the current noise. A particle that has not beaten coincidence is drawn grey. Past
+      &eta;&nbsp;&asymp;&nbsp;4 the second number falls below the first and the field goes uniformly grey,
+      because at that noise no neighbourhood can prove anything. So the disordered phase is genuinely
+      colourless &mdash; not stylised as colourless, <em>measured</em> as colourless &mdash; and the
+      transition is the screen gaining colour. Strokes are drawn additively over a short trail, which
+      costs nothing and buys the model's other famous feature for free: the giant density fluctuations pile
+      light on light, so the travelling high-density bands show up as bright filaments running across the
+      ordered phase, which is what people came to look at.</p>
+    <p><strong>Honest weaknesses.</strong> Every dot is measured during a moving sweep, not from a run
+      equilibrated at that &eta;, so the cloud lags: the descending branch keeps order slightly past where
+      it belongs and the ascending branch is slow to find it. That is why the two colours are separated at
+      all, and why the gap is an upper bound on hysteresis rather than a measurement of it. The sweep
+      deliberately crawls where &phi; is mid-range, which means the dot density along the axis is a
+      statement about the sweep controller and not about the physics &mdash; do not read a dense band as a
+      long-lived state. Four thousand particles in an 800&times;600 box is a small system; &eta;<sub>c</sub>
+      here sits somewhere near 2.9 but drifts with density, speed and radius, and none of the sharpness
+      arguments in the literature apply at this size, so no exponent is printed. The colour is gated by how
+      much room the current noise leaves between coincidence and consensus, and past &eta;&nbsp;&asymp;&nbsp;4
+      that room closes and the field goes flat grey &mdash; correct, but it means the high-&eta; end tells
+      you less than the low-&eta; end. Raising particles to 7000 roughly doubles the per-tick cost and a
+      slow machine will start shedding ticks, which quietly slows the sweep rather than dropping frames.
+      Moving the particle slider up seeds the new ones at random into a field that has already agreed, so
+      &phi; dips for a second afterwards; that dip is the slider, not the model.</p>
+  </details>
+</div>
+<script src="../lib/gifenc.js"></script>
+<script src="../lib/controls.js"></script>
+<script>
+'use strict';
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+
+// --- parameters -----------------------------------------------------------
+let N = 4200;        // particles
+let R = 22;          // interaction radius, px
+let V = 1.6;         // step length per tick, px
+let ETA = 3.9;       // angular noise width, radians (0 .. 2pi)
+                     // boots in the gas on purpose: the piece should start with
+                     // nothing to look at and earn the flock on camera
+let TRAIL = 0.10;    // per-frame fade of the previous image: each particle
+                     // paints its own path, so the field is drawn as flow
+let SWEEP = true;
+
+const ETA_MAX = 5.0; // beyond ~4.5 nothing further happens; the axis stops where the model does
+const TRAV = 2600;   // ticks to cross the whole eta axis at rate multiplier 1
+const WIN = 12;      // steps averaged into one plotted dot
+
+// --- rng ------------------------------------------------------------------
+let _s = (Date.now() ^ 0x9e3779b9) >>> 0;
+function rnd() {
+  _s ^= _s << 13; _s >>>= 0;
+  _s ^= _s >> 17;
+  _s ^= _s << 5;  _s >>>= 0;
+  return _s / 4294967296;
+}
+
+// --- state ----------------------------------------------------------------
+const MAXN = 7000;
+const px = new Float32Array(MAXN), py = new Float32Array(MAXN), th = new Float32Array(MAXN);
+const loc = new Float32Array(MAXN);   // local alignment of each particle's neighbourhood
+const nb = new Float32Array(MAXN);    // how many particles that neighbourhood held
+// cos/sin of the current heading, computed once per tick in the advance loop
+// and reused by both the order-parameter sum and the renderer
+const tc = new Float32Array(MAXN), ts = new Float32Array(MAXN);
+
+// uniform grid, rebuilt every tick by counting sort
+let gw = 1, gh = 1, cw = 1, ch = 1, NC = 1;
+let cnt = new Int32Array(1), start = new Int32Array(2), cur = new Int32Array(1);
+const cellOf = new Int32Array(MAXN);
+// cell-sorted mirrors — the pair loop only ever touches these, in order
+const qx = new Float32Array(MAXN), qy = new Float32Array(MAXN);
+const qc = new Float32Array(MAXN), qs = new Float32Array(MAXN);
+const qid = new Int32Array(MAXN);
+const ax = new Float32Array(MAXN), ay = new Float32Array(MAXN), an = new Float32Array(MAXN);
+
+function buildGrid() {
+  gw = Math.max(5, Math.floor(W / R));
+  gh = Math.max(5, Math.floor(H / R));
+  cw = W / gw; ch = H / gh; NC = gw * gh;
+  cnt = new Int32Array(NC); cur = new Int32Array(NC); start = new Int32Array(NC + 1);
+}
+
+function seed() {
+  for (let i = 0; i < N; i++) {
+    px[i] = rnd() * W; py[i] = rnd() * H; th[i] = rnd() * Math.PI * 2;
+    loc[i] = 0; nb[i] = 1;
+  }
+}
+
+// each unordered pair of cells is visited once: self, then these four
+const OX = [1, -1, 0, 1], OY = [0, 1, 1, 1];
+
+function step() {
+  const r2 = R * R;
+  // bin
+  cnt.fill(0);
+  for (let i = 0; i < N; i++) {
+    let gx = px[i] / cw | 0, gy = py[i] / ch | 0;
+    if (gx >= gw) gx = gw - 1; if (gx < 0) gx = 0;
+    if (gy >= gh) gy = gh - 1; if (gy < 0) gy = 0;
+    const c = gy * gw + gx; cellOf[i] = c; cnt[c]++;
+  }
+  let a = 0;
+  for (let c = 0; c < NC; c++) { start[c] = a; cur[c] = a; a += cnt[c]; }
+  start[NC] = a;
+  for (let i = 0; i < N; i++) {
+    const k = cur[cellOf[i]]++;
+    qx[k] = px[i]; qy[k] = py[i];
+    const t = th[i];
+    const c = Math.cos(t), s = Math.sin(t);
+    qc[k] = c; qs[k] = s; qid[k] = i;
+    ax[k] = c; ay[k] = s; an[k] = 1;   // a particle is its own neighbour
+  }
+  // pairs
+  for (let c = 0; c < NC; c++) {
+    const k0 = start[c], k1 = start[c + 1];
+    if (k0 === k1) continue;
+    const gx = c % gw, gy = (c / gw) | 0;
+    for (let k = k0; k < k1; k++) {          // inside the cell
+      const xi = qx[k], yi = qy[k], ck = qc[k], sk = qs[k];
+      let vx = 0, vy = 0, n = 0;
+      for (let m = k + 1; m < k1; m++) {
+        const dx = qx[m] - xi, dy = qy[m] - yi;
+        if (dx * dx + dy * dy <= r2) {
+          vx += qc[m]; vy += qs[m]; n++;
+          ax[m] += ck; ay[m] += sk; an[m]++;
+        }
+      }
+      ax[k] += vx; ay[k] += vy; an[k] += n;
+    }
+    for (let o = 0; o < 4; o++) {            // and the four forward neighbours
+      let bx = gx + OX[o], by = gy + OY[o], ox = 0, oy = 0;
+      if (bx < 0) { bx += gw; ox = -W; } else if (bx >= gw) { bx -= gw; ox = W; }
+      if (by >= gh) { by -= gh; oy = H; }
+      const c2 = by * gw + bx, m0 = start[c2], m1 = start[c2 + 1];
+      if (m0 === m1) continue;
+      for (let k = k0; k < k1; k++) {
+        const xi = qx[k], yi = qy[k], ck = qc[k], sk = qs[k];
+        let vx = 0, vy = 0, n = 0;
+        for (let m = m0; m < m1; m++) {
+          const dx = qx[m] + ox - xi, dy = qy[m] + oy - yi;
+          if (dx * dx + dy * dy <= r2) {
+            vx += qc[m]; vy += qs[m]; n++;
+            ax[m] += ck; ay[m] += sk; an[m]++;
+          }
+        }
+        ax[k] += vx; ay[k] += vy; an[k] += n;
+      }
+    }
+  }
+  // turn, with noise
+  for (let k = 0; k < N; k++) {
+    const i = qid[k], vx = ax[k], vy = ay[k], n = an[k];
+    loc[i] = Math.sqrt(vx * vx + vy * vy) / n;
+    nb[i] = n;
+    th[i] = Math.atan2(vy, vx) + ETA * (rnd() - 0.5);
+  }
+  // advance, periodic box
+  for (let i = 0; i < N; i++) {
+    const t = th[i], c = Math.cos(t), s = Math.sin(t);
+    tc[i] = c; ts[i] = s;
+    let x = px[i] + V * c, y = py[i] + V * s;
+    if (x < 0) x += W; else if (x >= W) x -= W;
+    if (y < 0) y += H; else if (y >= H) y -= H;
+    px[i] = x; py[i] = y;
+  }
+  measure();
+}
+
+// --- the instrument -------------------------------------------------------
+// phi = |sum of unit velocities| / N. measured every tick; a dot is the mean
+// of WIN consecutive ticks, dropped at the mean eta of those same ticks.
+let phi = 0, phiEMA = 0;
+let accPhi = 0, accEta = 0, accN = 0;
+let dir = -1;            // -1 sweeping down, +1 sweeping up
+
+const CAP = 7000;
+const ptE = new Float32Array(CAP), ptP = new Float32Array(CAP);
+const ptD = new Int8Array(CAP);
+let ptN = 0, ptW = 0;    // count (saturating at CAP) and write cursor
+let flashX = -1, flashY = -1, flashA = 0;
+
+function measure() {
+  let sx = 0, sy = 0;
+  for (let i = 0; i < N; i++) { sx += tc[i]; sy += ts[i]; }
+  phi = Math.sqrt(sx * sx + sy * sy) / N;
+  phiEMA += (phi - phiEMA) * 0.05;
+
+  accPhi += phi; accEta += ETA; accN++;
+  if (accN >= WIN) {
+    const e = accEta / accN, p = accPhi / accN;
+    ptE[ptW] = e; ptP[ptW] = p; ptD[ptW] = dir;
+    ptW = (ptW + 1) % CAP; if (ptN < CAP) ptN++;
+    flashX = e; flashY = p; flashA = 1;
+    accPhi = 0; accEta = 0; accN = 0;
+  }
+
+  if (SWEEP) {
+    // slowest where the measurement is changing: scale the rate by how far the
+    // smoothed order parameter is from the middle of its range. this locates
+    // the transition from the data rather than from a hard-coded eta_c.
+    const u = Math.min(1, Math.abs(phiEMA - 0.45) / 0.45);
+    const m = 0.3 + 0.7 * Math.pow(u, 1.5);
+    ETA += dir * m * ETA_MAX / TRAV;
+    if (ETA <= 0) { ETA = 0; dir = 1; }
+    else if (ETA >= ETA_MAX) { ETA = ETA_MAX; dir = -1; }
+    syncEta();
+  }
+  if (flashA > 0) flashA *= 0.94;
+}
+
+// --- colour: OKLCh, cyclic in hue, gamut-clipped per hue ------------------
+// hue = heading (must close, or the map invents a seam the physics has not).
+// chroma + lightness = local alignment (measured, not decorative).
+const HB = 32, OB = 4, NBATCH = HB * OB;
+const COL = new Array(NBATCH);
+
+function oklch(L, C, h) {
+  const a = C * Math.cos(h), b = C * Math.sin(h);
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+  const l = l_ * l_ * l_, m = m_ * m_ * m_, s = s_ * s_ * s_;
+  return [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+  ];
+}
+function inGamut(rgb) {
+  for (let i = 0; i < 3; i++) if (rgb[i] < -0.0005 || rgb[i] > 1.0005) return false;
+  return true;
+}
+function maxChroma(L, h) {   // bisect for the largest in-gamut chroma at this hue
+  let lo = 0, hi = 0.42;
+  for (let it = 0; it < 22; it++) {
+    const mid = (lo + hi) / 2;
+    if (inGamut(oklch(L, mid, h))) lo = mid; else hi = mid;
+  }
+  return lo;
+}
+function css(L, C, h) {
+  const rgb = oklch(L, C, h);
+  const g = u => {
+    u = u <= 0.0031308 ? 12.92 * u : 1.055 * Math.pow(Math.max(u, 0), 1 / 2.4) - 0.055;
+    return Math.max(0, Math.min(255, Math.round(u * 255)));
+  };
+  return 'rgb(' + g(rgb[0]) + ',' + g(rgb[1]) + ',' + g(rgb[2]) + ')';
+}
+(function buildPalette() {
+  for (let o = 0; o < OB; o++) {
+    const f = o / (OB - 1);                 // 0 = neighbours disagree, 1 = consensus
+    const L = 0.36 + 0.42 * f;              // dim slate -> bright
+    const want = 0.008 + 0.160 * f;         // near-grey -> as saturated as the gamut allows
+    for (let hI = 0; hI < HB; hI++) {
+      const h = (hI + 0.5) / HB * Math.PI * 2;
+      const C = Math.min(want, maxChroma(L, h) * 0.96);
+      COL[o * HB + hI] = css(L, C, h);
+    }
+  }
+})();
+
+// --- render ---------------------------------------------------------------
+const bcnt = new Int32Array(NBATCH), bst = new Int32Array(NBATCH + 1), bcur = new Int32Array(NBATCH);
+const bid = new Int32Array(MAXN);
+const bx = new Float32Array(MAXN), by = new Float32Array(MAXN);
+const bc = new Float32Array(MAXN), bs = new Float32Array(MAXN);
+const INV2PI = 1 / (Math.PI * 2);
+
+// A particle is drawn by how much its own neighbourhood agrees, and agreement is
+// only meaningful against what coincidence would have produced anyway. For n
+// independent headings, |Σ|/n is Rayleigh with σ = 1/√(2n), so 1.4/√n sits near
+// its 86th percentile: below that a patch is not distinguishable from luck and
+// is drawn grey. Each particle is scored against its OWN neighbour count, not a
+// mean density — this model makes giant density fluctuations, and a crowded
+// patch has to clear a lower bar than a lonely one to mean the same thing.
+// The ceiling is what a patch in perfect consensus still measures once the noise
+// has been applied, sin(η/2)/(η/2). Both ends are computed, not chosen. Past
+// η ≈ 4 the ceiling drops under the chance floor, and the field goes grey
+// because at that noise no neighbourhood can prove anything — which is the
+// disordered phase reporting itself rather than being stylised.
+const CHANCE = new Float32Array(512);
+(function buildChance() { for (let n = 1; n < 512; n++) CHANCE[n] = 1.4 / Math.sqrt(n); })();
+let LO_HIGH = 0.94;
+function alignWindow() {
+  const s = ETA / 2;
+  LO_HIGH = s < 1e-3 ? 1 : Math.sin(s) / s;
+}
+let SEG = 3, LW = 1.6;
+
+const vig = document.createElement('canvas');
+vig.width = W; vig.height = H;
+(function buildVignette() {
+  const g = vig.getContext('2d');
+  const rad = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.24,
+                                     W / 2, H / 2, Math.max(W, H) * 0.70);
+  rad.addColorStop(0, 'rgba(6,7,14,0)');
+  rad.addColorStop(0.62, 'rgba(6,7,14,0.20)');
+  rad.addColorStop(1, 'rgba(6,7,14,0.80)');
+  g.fillStyle = rad; g.fillRect(0, 0, W, H);
+})();
+
+function draw() {
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = 'rgba(6,7,14,' + TRAIL.toFixed(3) + ')';
+  ctx.fillRect(0, 0, W, H);
+
+  // counting-sort the particles into (hue, alignment) batches so the whole
+  // field is drawn in a few dozen stroke calls instead of N of them
+  alignWindow();
+  bcnt.fill(0);
+  for (let i = 0; i < N; i++) {
+    const t = th[i];
+    let hI = ((t * INV2PI % 1) + 1) % 1 * HB | 0;
+    if (hI >= HB) hI = HB - 1;
+    let n = nb[i] | 0; if (n > 511) n = 511; else if (n < 1) n = 1;
+    const lo = CHANCE[n], head = LO_HIGH - lo;
+    // headroom is what the current noise leaves between coincidence and
+    // consensus. as it closes the field fades out rather than letting the
+    // random tail — 5% of any gas beats its own chance level — read as flocking
+    let f = 0;
+    if (head > 0) {
+      f = (loc[i] - lo) / (head > 0.06 ? head : 0.06);
+      if (head < 0.25) f *= head * 4;
+      if (f < 0) f = 0; else if (f > 1) f = 1;
+    }
+    let oI = (f * OB) | 0; if (oI >= OB) oI = OB - 1;
+    const b = oI * HB + hI;
+    bid[i] = b; bcnt[b]++;
+  }
+  let a = 0;
+  for (let b = 0; b < NBATCH; b++) { bst[b] = a; bcur[b] = a; a += bcnt[b]; }
+  bst[NBATCH] = a;
+  for (let i = 0; i < N; i++) {
+    const k = bcur[bid[i]]++;
+    bx[k] = px[i]; by[k] = py[i];
+    bc[k] = tc[i]; bs[k] = ts[i];
+  }
+
+  // strokes are opaque, not additive: two overlapping particles of the same
+  // heading must stay that hue rather than clip toward white. depth comes from
+  // the trail instead, which each particle paints along its own path.
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.lineWidth = LW;
+  ctx.lineCap = 'butt';
+  for (let b = 0; b < NBATCH; b++) {
+    const k0 = bst[b], k1 = bst[b + 1];
+    if (k0 === k1) continue;
+    ctx.strokeStyle = COL[b];
+    ctx.beginPath();
+    for (let k = k0; k < k1; k++) {
+      const x = bx[k], y = by[k], dx = bc[k] * SEG, dy = bs[k] * SEG;
+      ctx.moveTo(x, y); ctx.lineTo(x - dx, y - dy);
+      // the box is periodic; a stroke near an edge is redrawn on the far side
+      // so the wrap does not read as a seam
+      if (x < SEG) { ctx.moveTo(x + W, y); ctx.lineTo(x + W - dx, y - dy); }
+      else if (x > W - SEG) { ctx.moveTo(x - W, y); ctx.lineTo(x - W - dx, y - dy); }
+      if (y < SEG) { ctx.moveTo(x, y + H); ctx.lineTo(x - dx, y + H - dy); }
+      else if (y > H - SEG) { ctx.moveTo(x, y - H); ctx.lineTo(x - dx, y - H - dy); }
+    }
+    ctx.stroke();
+  }
+
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(vig, 0, 0);
+  panel();
+}
+
+// --- panel: phi against eta, measured points only -------------------------
+const PW = 250, PH = 168, PX = W - 16 - PW, PY = H - 16 - PH;
+const AX0 = PX + 28, AX1 = PX + PW - 14, AY0 = PY + 28, AY1 = PY + PH - 40;
+const ex = e => AX0 + (e / ETA_MAX) * (AX1 - AX0);
+const ey = p => AY1 - p * (AY1 - AY0);
+const MONO = 'px ui-monospace, SFMono-Regular, Menlo, monospace';
+
+function panel() {
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.beginPath();
+  const r = 7;
+  ctx.moveTo(PX + r, PY);
+  ctx.arcTo(PX + PW, PY, PX + PW, PY + PH, r);
+  ctx.arcTo(PX + PW, PY + PH, PX, PY + PH, r);
+  ctx.arcTo(PX, PY + PH, PX, PY, r);
+  ctx.arcTo(PX, PY, PX + PW, PY, r);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(5, 7, 13, 0.80)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(120, 175, 205, 0.20)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.font = '8.5' + MONO;
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(150, 186, 206, 0.88)';
+  ctx.fillText('ORDER PARAMETER  φ  vs  NOISE  η', PX + 12, PY + 16);
+
+  // frame: y from 0 to 1, x from 0 to ETA_MAX
+  ctx.strokeStyle = 'rgba(110, 160, 190, 0.10)';
+  ctx.beginPath();
+  for (let q = 0; q <= 2; q++) { const y = ey(q / 2); ctx.moveTo(AX0, y); ctx.lineTo(AX1, y); }
+  for (let e = 1; e < ETA_MAX; e++) { const x = ex(e); ctx.moveTo(x, AY0); ctx.lineTo(x, AY1); }
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(120, 175, 205, 0.26)';
+  ctx.beginPath();
+  ctx.moveTo(AX0, AY0 - 2); ctx.lineTo(AX0, AY1); ctx.lineTo(AX1, AY1);
+  ctx.stroke();
+
+  ctx.fillStyle = 'rgba(126, 158, 178, 0.8)';
+  ctx.textAlign = 'right';
+  ctx.fillText('1', AX0 - 5, ey(1) + 3);
+  ctx.fillText('0', AX0 - 5, ey(0) + 3);
+  ctx.textAlign = 'center';
+  for (let e = 0; e <= ETA_MAX; e++) ctx.fillText(String(e), ex(e), AY1 + 11);
+
+  // where the sweep is now
+  const cx = ex(ETA);
+  ctx.strokeStyle = 'rgba(150, 200, 225, 0.16)';
+  ctx.beginPath(); ctx.moveTo(cx, AY0 - 2); ctx.lineTo(cx, AY1 + 3); ctx.stroke();
+
+  // the measured cloud. nothing is fitted, smoothed or joined.
+  ctx.globalCompositeOperation = 'lighter';
+  for (let q = 0; q < ptN; q++) {
+    const x = ex(ptE[q]), y = ey(ptP[q]);
+    ctx.fillStyle = ptD[q] < 0 ? 'rgba(104, 202, 232, 0.55)' : 'rgba(240, 172, 92, 0.55)';
+    ctx.fillRect(x - 1.1, y - 1.1, 2.2, 2.2);
+  }
+  // the dot just recorded, still warm
+  if (flashA > 0.03) {
+    const x = ex(flashX), y = ey(flashY);
+    ctx.beginPath();
+    ctx.arc(x, y, 1.6 + 5.5 * flashA, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(190, 226, 246,' + (0.22 * flashA).toFixed(3) + ')';
+    ctx.fill();
+  }
+  // live reading: instantaneous phi at the live eta
+  ctx.beginPath();
+  ctx.arc(cx, ey(phi), 2.4, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(226, 240, 250, 0.92)';
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  // the live readout is drawn in the colour of the dots being laid down right
+  // now, so the two branches need no separate legend
+  ctx.font = '9' + MONO;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = !SWEEP ? 'rgba(176, 192, 206, 0.9)'
+    : (dir < 0 ? 'rgba(126, 214, 240, 0.95)' : 'rgba(244, 186, 110, 0.95)');
+  ctx.fillText('η ' + ETA.toFixed(3) + (SWEEP ? (dir < 0 ? ' falling' : ' rising') : ' held'),
+    PX + 13, PY + PH - 10);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(216, 232, 244, 0.92)';
+  ctx.fillText('φ ' + phi.toFixed(3), PX + PW - 13, PY + PH - 10);
+  ctx.font = '8.5' + MONO;
+  ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(112, 142, 162, 0.7)';
+  ctx.fillText('n ' + ptN.toLocaleString(), PX + PW - 13, PY + 16);
+  ctx.restore();
+}
+
+// --- controls -------------------------------------------------------------
+const $ = id => document.getElementById(id);
+function syncEta() { $('s-eta').value = ETA; $('v-eta').textContent = ETA.toFixed(2); }
+
+$('s-eta').oninput = e => {
+  ETA = +e.target.value; $('v-eta').textContent = ETA.toFixed(2);
+  SWEEP = false; $('sweep').textContent = 'sweep · off';
+};
+$('sweep').onclick = () => {
+  SWEEP = !SWEEP;
+  $('sweep').textContent = 'sweep · ' + (SWEEP ? 'on' : 'off');
+};
+$('s-n').oninput = e => {
+  const n = +e.target.value; $('v-n').textContent = n;
+  if (n > N) { for (let i = N; i < n; i++) { px[i] = rnd() * W; py[i] = rnd() * H; th[i] = rnd() * Math.PI * 2; loc[i] = 0; } }
+  N = n;
+};
+$('s-r').oninput = e => { R = +e.target.value; $('v-r').textContent = R; buildGrid(); };
+$('s-v').oninput = e => { V = e.target.value / 10; $('v-v').textContent = V.toFixed(1); };
+$('s-trail').oninput = e => { TRAIL = 1 - e.target.value / 100; $('v-trail').textContent = e.target.value; };
+$('clear').onclick = () => { ptN = 0; ptW = 0; };
+$('reseed').onclick = () => { seed(); ptN = 0; ptW = 0; };
+
+// click the plot to jump straight to a value of eta and hold there
+cv.addEventListener('pointerdown', e => {
+  const b = cv.getBoundingClientRect();
+  const x = (e.clientX - b.left) * (W / b.width), y = (e.clientY - b.top) * (H / b.height);
+  if (x < PX || x > PX + PW || y < PY || y > PY + PH) return;
+  ETA = Math.max(0, Math.min(ETA_MAX, (x - AX0) / (AX1 - AX0) * ETA_MAX));
+  SWEEP = false; $('sweep').textContent = 'sweep · off';
+  syncEta();
+});
+
+// deep links: ?eta=..&n=..&r=..&v=..&trail=..&sweep=0|1&seed=..
+// a link is a whole experiment: ?eta=0.6&sweep=0 lands in the ordered phase and
+// holds there, ?eta=4&sweep=0 in the gas, ?sweep=1 walks the transition.
+(function readQuery() {
+  const q = new URLSearchParams(location.search);
+  const num = (k, d) => (q.has(k) && isFinite(+q.get(k)) ? +q.get(k) : d);
+  const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+  if (q.has('seed')) _s = (Math.imul(+q.get('seed') | 0, 0x9e3779b1) ^ 0x85ebca6b) >>> 0;
+  N     = Math.round(clamp(num('n', N), 800, MAXN) / 100) * 100;
+  R     = Math.round(clamp(num('r', R), 12, 34));
+  V     = clamp(num('v', V), 0.4, 3.4);
+  ETA   = clamp(num('eta', ETA), 0, ETA_MAX);
+  const tr = Math.round(clamp(num('trail', (1 - TRAIL) * 100), 30, 97));
+  TRAIL = 1 - tr / 100;
+  if (q.has('sweep')) SWEEP = !!num('sweep', 1);
+  $('s-n').value = N;         $('v-n').textContent = N;
+  $('s-r').value = R;         $('v-r').textContent = R;
+  $('s-v').value = Math.round(V * 10); $('v-v').textContent = V.toFixed(1);
+  $('s-trail').value = tr;    $('v-trail').textContent = tr;
+  $('sweep').textContent = 'sweep · ' + (SWEEP ? 'on' : 'off');
+})();
+
+// --- boot -----------------------------------------------------------------
+// the field is relaxed for a couple of hundred steps at the starting eta before
+// the page paints, so what you arrive at is a settled near-critical field rather
+// than a random scatter. the panel deliberately starts empty: every dot in it is
+// measured live, on the run you are watching.
+buildGrid();
+seed();
+(function warmUp() {
+  const s = SWEEP;
+  SWEEP = false;
+  for (let t = 0; t < 220; t++) step();
+  SWEEP = s;
+  ptN = 0; ptW = 0; accPhi = 0; accEta = 0; accN = 0; flashA = 0;
+})();
+syncEta();
+SketchControls.attach({ canvas: cv, step, draw, ticksPerSecond: 60 });
+
+// headless-screenshot hook (harmless in a browser)
+window.__vk = {
+  stats: () => ({ phi, eta: ETA, dir, sweep: SWEEP, n: N, r: R, v: V, dots: ptN }),
+  step, draw,
+  set: o => {
+    if (o.n != null) {
+      const n = Math.round(Math.max(800, Math.min(MAXN, o.n)));
+      for (let i = N; i < n; i++) { px[i] = rnd() * W; py[i] = rnd() * H; th[i] = rnd() * Math.PI * 2; loc[i] = 0; }
+      N = n;
+    }
+    if (o.r != null) { R = o.r; buildGrid(); }
+    if (o.v != null) V = o.v;
+    if (o.eta != null) { ETA = o.eta; syncEta(); }
+    if (o.sweep != null) { SWEEP = !!o.sweep; $('sweep').textContent = 'sweep · ' + (SWEEP ? 'on' : 'off'); }
+  },
+};
+</script>
+</body>
+</html>
